@@ -32,5 +32,8 @@
     <ClInclude Include="gameboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DrawPrimitives.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
