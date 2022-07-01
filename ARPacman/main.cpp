@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <GL/GLU.h>
 #include "DrawPrimitives.h"
+#include <iostream>
 
 // Gameboard
 int map[22][19] = {
@@ -93,7 +94,7 @@ void init(int argc, char* argv[]) {
     glEnable(GL_LIGHT0);
 }
 
-//draw coins
+//draw pellets
 void drawPellets()
 {
     //set material
@@ -175,7 +176,7 @@ void drawPowerPellets()
     }
 }
 
-//draw maze
+//draw gameboard
 void drawGameboard()
 {
     //for IDLE image,create a display list
@@ -695,6 +696,34 @@ void display(GLFWwindow* window)
     pacmanAgent.enableKey = true;
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    //control pac direction
+    if (action == GLFW_PRESS){
+    switch (key)
+    {
+    case GLFW_KEY_W:
+        pacMoveDir = UP;
+        std::cout << pacMoveDir;
+        break;
+    case GLFW_KEY_S:
+        pacMoveDir = DOWN;
+        std::cout << pacMoveDir;
+        break;
+    case GLFW_KEY_A:
+        pacMoveDir = LEFT;
+        std::cout << pacMoveDir;
+        break;
+    case GLFW_KEY_D:
+        pacMoveDir = RIGHT;
+        std::cout << pacMoveDir;
+        break;
+    default:
+        break;
+    }}
+      
+}
+
 
 //idle func
 void idle()
@@ -735,6 +764,9 @@ int main(int argc, char* argv[])
     glfwMakeContextCurrent(window);
     // The minimum number of screen updates to wait for until the buffers are swapped by glfwSwapBuffers
     glfwSwapInterval(1);
+
+    // enable Keyboard control
+    glfwSetKeyCallback(window, key_callback);
 
     // Initialize the frustum with the size of the framebuffer
     int width, height;
