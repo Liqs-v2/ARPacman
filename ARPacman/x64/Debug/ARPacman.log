@@ -1,10 +1,10 @@
-﻿  pacman.cpp
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(22,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(23,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(47,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(48,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(73,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(74,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(99,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\pacman.cpp(100,15): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+﻿  Pacman.cpp
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(42,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(43,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(70,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(71,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(98,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(99,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(132,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Pacman.cpp(133,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
   ARPacman.vcxproj -> C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\x64\Debug\ARPacman.exe
