@@ -1,10 +1,23 @@
 #include <Windows.h>
 #include "Pacman.h"
+#include "Ghost.h"
 #include "gameManager.h"
 #include <GLFW/glfw3.h>
 #include <GL/GLU.h>
 #include "DrawPrimitives.h"
 #include <iostream>
+#include <iomanip>
+
+//#include <opencv2/highgui.hpp>
+//#include <opencv2/imgproc.hpp>
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+//#include "PoseEstimation.h"
+
+using namespace std;
+
 
 // Gameboard
 int map[22][19] = {
@@ -33,6 +46,13 @@ int map[22][19] = {
 };
 
 Pacman pacmanAgent;
+Ghost ghost1(0.0f, 0.96f, 1.0f); //green-colored ghost
+Ghost ghost2(1.0f, 0.75f, 0.79f); //pink-colored ghost
+Ghost ghost3(0.85f, 0.65f, 0.13f); //orange-colored ghost
+Ghost ghost4(1.0f, 0.0f, 0.0f); //red-colored ghost
+
+std::vector<Ghost*> ghosts = { &ghost1,&ghost2,&ghost3,&ghost4 };
+extern void ghostAction(Ghost& ghost, const Pacman& pacman);
 
 extern GameManager manager;
 float angle = -45; //grid rotation angle
@@ -136,6 +156,26 @@ void Pacman::drawPacman()
     glPushMatrix();
     glTranslatef(this->x, 0, this->z);
     drawSphere(0.3, 20, 20);
+    glPopMatrix();
+}
+
+void Ghost::drawGhost()
+{
+    //material color
+    GLfloat mat_color[] = { this->colorR, this->colorG, this->colorB, 1.0 };
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_color);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
+    glEnable(GL_COLOR_MATERIAL);
+
+    glColor3f(this->colorR, this->colorG, this->colorB);
+    GLUquadric* obj = gluNewQuadric();
+    glPushMatrix();
+    glTranslatef(this->x, 0, this->z);
+    glRotatef(-90, 1, 0, 0);
+    gluCylinder(obj, 0.4 * len, 0.4 * len, 0.3 * len, 32, 5);
+    glTranslatef(0, 0, 0.3 * len);
+    drawSphere(0.2, 20, 20);
     glPopMatrix();
 }
 
@@ -692,12 +732,29 @@ void display(GLFWwindow* window)
         pacmanAgent.drawPacman();
         break;
     }
+
+    ghost1.drawGhost();
+    ghost2.drawGhost();
+    ghost3.drawGhost();
+    ghost4.drawGhost();
     //allow keyboard control of direction
     pacmanAgent.enableKey = true;
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+
+    //while keyboard is disabled, do nothing
+    if (!pacmanAgent.enableKey)
+    {
+        return;
+    }
+    //while keyboard is enabled, press any key to start the game
+    else if (manager.gameStatus == PAUSED)
+    {
+        manager.gameStatus = STARTED;
+        std::cout << "Game has started";
+    }
     //control pac direction
     if (action == GLFW_PRESS){
     switch (key)
@@ -776,6 +833,12 @@ int main(int argc, char* argv[])
     // Initialize the GL library
     // -> Give app arguments for configuration, e.g. depth or color should be activated or not
     init(argc, argv);
+
+    manager.controlThread = std::thread(gameManager, std::ref(manager));
+    for (auto pGhost : ghosts)
+    {
+        pGhost->ghostThread = std::thread(ghostAction, std::ref(*pGhost), std::ref(pacmanAgent));
+    }
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {

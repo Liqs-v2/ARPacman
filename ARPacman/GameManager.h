@@ -5,6 +5,7 @@
 #include <mutex>
 #include <chrono>
 #include "Pacman.h"
+#include "Ghost.h"
 #define ArrayX(x) round(x / len) + 9
 #define ArrayZ(z) round(z / len) + 10
 const int STARTED = 1;
