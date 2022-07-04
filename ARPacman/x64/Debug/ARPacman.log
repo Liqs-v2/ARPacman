@@ -1,55 +1,15 @@
-﻿  MarkerTracker.cpp
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.h(6,19): warning C4099: 'CvMemStorage': type name first seen using 'struct' now seen using 'class'
-C:\opencv\build\include\opencv2\core\types_c.h(1493): message : see declaration of 'CvMemStorage'
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(150,23): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(151,23): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(177,62): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(178,62): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(246,33): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(247,33): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(319,20): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(320,20): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(436,37): warning C4244: '-=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(437,34): warning C4244: '=': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=float
-          ]
-C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\MarkerTracker.cpp(441,61): warning C4244: 'argument': conversion from 'const double' to 'float', possible loss of data
-  ARPacman.vcxproj -> C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\x64\Debug\ARPacman.exe
+﻿  Pacman.cpp
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(14,22): warning C4305: '=': truncation from 'double' to 'float'
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(42,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(43,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(59,14): warning C4244: 'argument': conversion from 'float' to 'DWORD', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(71,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(72,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(88,14): warning C4244: 'argument': conversion from 'float' to 'DWORD', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(100,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(101,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(123,14): warning C4244: 'argument': conversion from 'float' to 'DWORD', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(135,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(136,15): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\Pacman.cpp(158,14): warning C4244: 'argument': conversion from 'float' to 'DWORD', possible loss of data
+  ARPacman.vcxproj -> C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\x64\Debug\ARPacman.exe

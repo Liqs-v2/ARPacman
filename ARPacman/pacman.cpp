@@ -56,6 +56,7 @@ void Pacman::moveUp()
     {
         countEats++;
     }
+    Sleep(10 / speed);
     //if the move is legal, update coordinates
     z -= 1 * len;
     //set wherever the pacman went to "EMPTY"
@@ -84,6 +85,7 @@ void Pacman::moveDown()
     {
         countEats++;
     }
+    Sleep(10 / speed);
     //update coordinates
     z += 1 * len;
     //set wherever the pacman went to "EMPTY"
@@ -118,6 +120,7 @@ void Pacman::moveLeft()
     {
         countEats++;
     }
+    Sleep(10 / speed);
     //update coordinates
     x -= 1 * len;
     //set wherever the pacman went to "EMPTY"
@@ -152,6 +155,7 @@ void Pacman::moveRight()
     {
         countEats++;
     }
+    Sleep(10 / speed);
     //update coordinates
     x += 1 * len;
     //set wherever the pacman went to "EMPTY"
