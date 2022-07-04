@@ -9,9 +9,11 @@ Team project for the course IN2018 Erweiterte Realität in the summer semester 2
 
 Include Directories:
 C:\<PATH>\ARPacman\ARPacman\Libraries\include
+C:\opencv\build\include
 
 Library Directories:
 C:\<PATH>\ARPacman\ARPacman\Libraries\lib
+C:\opencv\build\x64\vc15\lib
 
 **Linker:**
 
@@ -21,3 +23,4 @@ glfw3.lib
 opengl32.lib
 glew32.lib
 Glu32.lib
+opencv_world3414d.lib

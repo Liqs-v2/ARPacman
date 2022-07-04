@@ -11,7 +11,7 @@ Pacman::Pacman() : colorR(1.0f), colorG(1.0f), colorB(1.0f)
     //setting initial speed and location
     x = 0.0f;
     z = 6 * len;
-    speed = 5 * len; //per second
+    speed = 0.1 * len; //per second
     killed = false;
     countEats = 0;
     totalEatsToWin = 156;

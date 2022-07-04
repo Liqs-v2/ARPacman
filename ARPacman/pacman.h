@@ -6,6 +6,7 @@
 #define PELLET 2
 #define POWERPELLET 3
 extern int map[22][19];
+class Ghost;
 class GameManager;
 class Pacman
 {
@@ -23,9 +24,10 @@ public:
 	int countEats;
 	int totalEatsToWin;
 	bool enableKey;
+	bool killed;
 private:
 	float colorR, colorG, colorB; //color
 	float x, z; //coordinates on x-z plane (y pointing up)
 	float speed; //default is 5 steps / sec
-	bool killed;
+	//bool killed;
 };
