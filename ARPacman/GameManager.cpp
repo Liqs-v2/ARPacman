@@ -6,7 +6,7 @@
 extern Pacman pacmanAgent;
 extern std::vector<Ghost*> ghosts;
 extern void ghostAction(Ghost& ghost, const Pacman& pacman);
-extern int map[22][19];
+extern int gameMap[22][19];
 GameManager manager;
 
 
@@ -75,8 +75,8 @@ void GameManager::inPowerMode()
         {
             ghosts[i]->killed = true;
             ghosts[i]->setColor(0, 0, 0); //dead, body is invisible
-            ghosts[i]->x = 30 * len; //dead, move it out of scene
-            ghosts[i]->z = 50 * len;
+            ghosts[i]->x = 30 * gameLength; //dead, move it out of scene
+            ghosts[i]->z = 50 * gameLength;
         }
     }
 
@@ -139,11 +139,11 @@ void GameManager::endGame()
 {
     manager.gameStatus = END;
     manager.pacDeaths = 0;
-    //reset map
+    //reset gameMap
     for (int i = 0; i < 21; i++)
         for (int j = 0; j < 18; j++)
         {
-            map[i][j] = manager.backUpMap[i][j];
+            gameMap[i][j] = manager.backUpMap[i][j];
         }
     
     while (!ghosts[0]->ready4AnotherRound || !ghosts[1]->ready4AnotherRound ||

@@ -1,2 +1,4 @@
 C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\x64\Debug\ARPacman.exe
 C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\x64\Debug\ARPacman.exe
+G:\Uni\ErwRea\C++Proj\Git\ARPacman\ARPacman\x64\Debug\ARPacman.exe
+G:\Uni\ErwRea\C++Proj\Git\ARPacman\ARPacman\x64\Debug\ARPacman.pdb

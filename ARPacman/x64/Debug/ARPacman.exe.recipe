@@ -1,11 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <ProjectOutputs>
-    <ProjectOutput>
-      <FullPath>C:\Augmented Reality\04_ARPacman_Test\ARPacman\ARPacman\x64\Debug\ARPacman.exe</FullPath>
-    </ProjectOutput>
-  </ProjectOutputs>
-  <ContentFiles />
-  <SatelliteDlls />
-  <NonRecipeFileRefs />
+  <ProjectOutputs>G:\Uni\ErwRea\C++Proj\Git\ARPacman\ARPacman\x64\Debug\ARPacman.exe</ProjectOutputs>
+  <ContentFiles></ContentFiles>
+  <SatelliteDlls></SatelliteDlls>
+  <NonRecipeFileRefs></NonRecipeFileRefs>
 </Project>

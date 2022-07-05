@@ -6,8 +6,8 @@
 #include <chrono>
 #include "Pacman.h"
 #include "Ghost.h"
-#define ArrayX(x) round(x / len) + 9
-#define ArrayZ(z) round(z / len) + 10
+#define ArrayX(x) round(x / gameLength) + 9
+#define ArrayZ(z) round(z / gameLength) + 10
 const int STARTED = 1;
 const int PAUSED = 2;
 const int END = 3;

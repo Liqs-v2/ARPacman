@@ -91,60 +91,60 @@ void Ghost::move(int dir)
         break;
     case 1:
         //check walls. see if moving one step would crash onto a wall
-        zTemp = round((z - 1 * len) / len) + 10;
-        xTemp = round(x / len) + 9;
+        zTemp = round((z - 1 * gameLength) / gameLength) + 10;
+        xTemp = round(x / gameLength) + 9;
         //if the move is illegal, don't move
-        if (map[zTemp][xTemp] == WALL)
+        if (gameMap[zTemp][xTemp] == WALL)
         {
             return;
         }
         else
-            z -= 1 * len;
+            z -= 1 * gameLength;
         break;
     case 2:
         //check walls. see if moving one step would crash onto a wall
-        zTemp = round((z + 1 * len) / len) + 10;
-        xTemp = round(x / len) + 9;
+        zTemp = round((z + 1 * gameLength) / gameLength) + 10;
+        xTemp = round(x / gameLength) + 9;
         //if the move is illegal, don't move
-        if (map[zTemp][xTemp] == WALL)
+        if (gameMap[zTemp][xTemp] == WALL)
         {
             return;
         }
-        z += 1 * len;
+        z += 1 * gameLength;
         break;
     case 3:
         //check walls. see if moving one step would crash onto a wall
-        zTemp = round(z / len) + 10;
-        xTemp = round((x - 1 * len) / len) + 9;
+        zTemp = round(z / gameLength) + 10;
+        xTemp = round((x - 1 * gameLength) / gameLength) + 9;
         //it's ok to pass special spots
         if (zTemp == 10 && xTemp == -1)
         {
-            x = 9 * len;
+            x = 9 * gameLength;
             return;
         }
         //if the move is illegal, don't move
-        if (map[zTemp][xTemp] == WALL)
+        if (gameMap[zTemp][xTemp] == WALL)
         {
             return;
         }
-        x -= 1 * len;
+        x -= 1 * gameLength;
         break;
     case 4:
         //check walls. see if moving one step would crash onto a wall
-        zTemp = round(z / len) + 10;
-        xTemp = round((x + 1 * len) / len) + 9;
+        zTemp = round(z / gameLength) + 10;
+        xTemp = round((x + 1 * gameLength) / gameLength) + 9;
         //it's ok to pass special spots
         if (zTemp == 10 && xTemp == 19)
         {
-            x = -9 * len;
+            x = -9 * gameLength;
             return;
         }
         //if the move is illegal, don't move
-        if (map[zTemp][xTemp] == WALL)
+        if (gameMap[zTemp][xTemp] == WALL)
         {
             return;
         }
-        x += 1 * len;
+        x += 1 * gameLength;
         break;
     }
 }
@@ -169,7 +169,7 @@ void Ghost::waitForRelease()
     //the respawn seat is open now
     spotOccupied[this->spotNum] = false;
     mtx.unlock();
-    this->z = -2 * len;
+    this->z = -2 * gameLength;
     this->x = 0;
 }
 
@@ -215,7 +215,7 @@ void Ghost::resume()
 /*static members*/
 
 //four respawn spots
-float Ghost::spawnSpot[4][2] = { {0, -0.5 * len}, {0, 0.5 * len},{-1 * len, 0.5 * len},{1 * len, 0.5 * len} };
+float Ghost::spawnSpot[4][2] = { {0, -0.5 * gameLength}, {0, 0.5 * gameLength},{-1 * gameLength, 0.5 * gameLength},{1 * gameLength, 0.5 * gameLength} };
 //flag indicating ghost spots' status
 bool Ghost::spotOccupied[4] = { false, false,false,false };
 //time at last release

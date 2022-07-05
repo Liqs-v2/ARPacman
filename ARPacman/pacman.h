@@ -1,11 +1,11 @@
 #pragma once
 
-#define len 0.5f 
-#define EMPTY 0
+#define gameLength 0.5f 
+#define EMPTYSPACE 0
 #define WALL 1
 #define PELLET 2
 #define POWERPELLET 3
-extern int map[22][19];
+extern int gameMap[22][19];
 class Ghost;
 class GameManager;
 class Pacman

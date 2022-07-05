@@ -7,6 +7,9 @@
 #include "DrawPrimitives.h"
 #include <iostream>
 #include <iomanip>
+//#include "OpenCVSetup.h"
+//#include<opencv2/opencv.hpp>
+
 
 //#include <opencv2/highgui.hpp>
 //#include <opencv2/imgproc.hpp>
@@ -14,13 +17,15 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include<opencv2/opencv.hpp>
+#include"MarkerTracker.h"
 //#include "PoseEstimation.h"
 
 using namespace std;
 
-
+cv::VideoCapture cap(9);
 // Gameboard
-int map[22][19] = {
+int gameMap[22][19] = {
 {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
 {1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1},
 {1,3,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,3,1},
@@ -61,6 +66,7 @@ moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 
 GLuint gameboard = glGenLists(1);
 
+void detectMarkers(MarkerTracker* m);
 
 //reshape
 void reshape(GLFWwindow* window, int width, int height)
@@ -126,18 +132,18 @@ void drawPellets()
     glColor3f(0.75, 0.75, 0.75); //silver solor
 
     glPushMatrix();
-    glTranslatef(-8 * len, 0, -9 * len);
+    glTranslatef(-8 * gameLength, 0, -9 * gameLength);
     for (int i = 1; i < 21; ++i)
     {
         for (int j = 1; j < 18; ++j)
         {
-            if (map[i][j] == PELLET)
+            if (gameMap[i][j] == PELLET)
             {
                 drawSphere(0.1, 10, 10);
             }
-            glTranslatef(1 * len, 0, 0);         //go to next spot
+            glTranslatef(1 * gameLength, 0, 0);         //go to next spot
         }
-        glTranslatef(-17 * len, 0, 1 * len);  //go to next row
+        glTranslatef(-17 * gameLength, 0, 1 * gameLength);  //go to next row
     }
     glPopMatrix();
 
@@ -173,8 +179,8 @@ void Ghost::drawGhost()
     glPushMatrix();
     glTranslatef(this->x, 0, this->z);
     glRotatef(-90, 1, 0, 0);
-    gluCylinder(obj, 0.4 * len, 0.4 * len, 0.3 * len, 32, 5);
-    glTranslatef(0, 0, 0.3 * len);
+    gluCylinder(obj, 0.4 * gameLength, 0.4 * gameLength, 0.3 * gameLength, 32, 5);
+    glTranslatef(0, 0, 0.3 * gameLength);
     drawSphere(0.2, 20, 20);
     glPopMatrix();
 }
@@ -189,7 +195,7 @@ void drawPowerPellets()
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
 
     glColor3f(0.93f, 0.86f, 0.51f); //golden color
-    //spots on the map to draw powerpellet
+    //spots on the gameMap to draw powerpellet
     int powerpellet[4][2] =
     {
         {2,1},{2,17},{16,1},{16,17}
@@ -199,17 +205,17 @@ void drawPowerPellets()
     for (int i = 0; i < 4; ++i)
     {
         int j = powerpellet[i][0], k = powerpellet[i][1];
-        if (map[j][k] != POWERPELLET)
+        if (gameMap[j][k] != POWERPELLET)
             continue;
-        float xShift = (float)len * (k - 9);
-        float zShift = (float)len * (j - 10);
+        float xShift = (float)gameLength * (k - 9);
+        float zShift = (float)gameLength * (j - 10);
         glPushMatrix();
         glTranslatef(xShift, 0, zShift);
         glRotatef(-90, 1, 0, 0);
-        gluCylinder(objDisk, 0.15, 0.15, 0.15 * len, 20, 20);
+        gluCylinder(objDisk, 0.15, 0.15, 0.15 * gameLength, 20, 20);
         glPopMatrix();
         glPushMatrix();
-        glTranslatef(xShift, 0.15 * len, zShift);
+        glTranslatef(xShift, 0.15 * gameLength, zShift);
         glRotatef(-90, 1, 0, 0);
         gluDisk(objDisk, 0.00, 0.15, 20, 20);
         glPopMatrix();
@@ -231,467 +237,467 @@ void drawGameboard()
     GLUquadricObj* objCylinder = gluNewQuadric();
     //rectangle at the center
     glPushMatrix();
-    glTranslatef(-2 * len, 0, -1 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //down
-    glTranslatef(4 * len, 0, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //down
+    glTranslatef(-2 * gameLength, 0, -1 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //down
+    glTranslatef(4 * gameLength, 0, 0);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //down
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5); //left
-    glTranslatef(2 * len, 0, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5); //left
-    glTranslatef(0, 0, 4 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5); //left
+    glTranslatef(2 * gameLength, 0, 0);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5); //left
+    glTranslatef(0, 0, 4 * gameLength);
     glPopMatrix();
 
     //draw up-down T shapes (1/2)
     glPushMatrix();
-    glTranslatef(-2 * len, 0, 3 * len);
+    glTranslatef(-2 * gameLength, 0, 3 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5);
-    glTranslatef(8 * len, 0, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5);
-    glTranslatef(-12 * len, 0, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5);
+    glTranslatef(8 * gameLength, 0, 0);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5);
+    glTranslatef(-12 * gameLength, 0, 0);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5);
     glPopMatrix();
 
     //draw up-down T shapes (2/2)
     glPushMatrix();
-    glTranslatef(0, 0, 3 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);
-    glTranslatef(0, 0, -8 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);
-    glTranslatef(0, 0, 12 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);
+    glTranslatef(0, 0, 3 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);
+    glTranslatef(0, 0, -8 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);
+    glTranslatef(0, 0, 12 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);
     glPopMatrix();
 
     //draw the up-down direction cylinder 
     glPushMatrix();
-    glTranslatef(0, 0, -7 * len);
+    glTranslatef(0, 0, -7 * gameLength);
     glRotatef(180, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5);
     glPopMatrix();
 
     /*the rest can be symmetric, draw the right half first*/
     //draw the furthest wall (upper half)
     glPushMatrix();
-    glTranslatef(0, 0, -10 * len);
+    glTranslatef(0, 0, -10 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 9 * len, 32, 5); //right
-    glTranslatef(0, 0, 9 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 9 * gameLength, 32, 5); //right
+    glTranslatef(0, 0, 9 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 7 * len, 32, 5); //down
-    glTranslatef(0, 0, 7 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 7 * gameLength, 32, 5); //down
+    glTranslatef(0, 0, 7 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //left
-    glTranslatef(0, 0, 3 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //left
+    glTranslatef(0, 0, 3 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //down
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //down
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //right
     glPopMatrix();
     //draw the furthest wall (lower half)
     glPushMatrix();
-    glTranslatef(0, 0, 11 * len);
+    glTranslatef(0, 0, 11 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 9 * len, 32, 5); //right
-    glTranslatef(0, 0, 9 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 9 * gameLength, 32, 5); //right
+    glTranslatef(0, 0, 9 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 8 * len, 32, 5); //up
-    glTranslatef(0, 0, 8 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 8 * gameLength, 32, 5); //up
+    glTranslatef(0, 0, 8 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //left
-    glTranslatef(0, 0, 3 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //left
+    glTranslatef(0, 0, 3 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //up
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //up
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //right
     glPopMatrix();
 
     //upper right rectangles
     glPushMatrix();
-    glTranslatef(2 * len, 0, -8 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //down
-    glTranslatef(0, 0, 1 * len);
+    glTranslatef(2 * gameLength, 0, -8 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //right
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //right
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //up
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //up
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //left
     glPopMatrix();
     glPushMatrix();
-    glTranslatef(6 * len, 0, -8 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //down
-    glTranslatef(0, 0, 1 * len);
+    glTranslatef(6 * gameLength, 0, -8 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //right
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //right
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //up
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //up
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //left
     glPopMatrix();
 
     //T-shape
     glPushMatrix();
-    glTranslatef(4 * len, 0, -5 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5);  //down
-    glTranslatef(0, 0, 2 * len);
+    glTranslatef(4 * gameLength, 0, -5 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //left
     glPopMatrix();
     //another T-shape
     glPushMatrix();
-    glTranslatef(4 * len, 0, 7 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
-    glTranslatef(-2 * len, 0, 2 * len);
+    glTranslatef(4 * gameLength, 0, 7 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
+    glTranslatef(-2 * gameLength, 0, 2 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 5 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 5 * gameLength, 32, 5);  //right
     glPopMatrix();
     //L shape
     glPushMatrix();
-    glTranslatef(6 * len, 0, 5 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
+    glTranslatef(6 * gameLength, 0, 5 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //right
     glPopMatrix();
     //line
     glPushMatrix();
-    glTranslatef(2 * len, 0, 5 * len);
+    glTranslatef(2 * gameLength, 0, 5 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //right
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(4 * len, 0, 1 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
+    glTranslatef(4 * gameLength, 0, 1 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(8 * len, 0, 7 * len);
+    glTranslatef(8 * gameLength, 0, 7 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //right
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(6 * len, 0, -5 * len);
+    glTranslatef(6 * gameLength, 0, -5 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //right
     glPopMatrix();
 
 
     /*the rest is symmetric to the above, draw the left half of the maze*/
     //draw the furthest wall (upper half)
     glPushMatrix();
-    glTranslatef(0, 0, -10 * len);
+    glTranslatef(0, 0, -10 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 9 * len, 32, 5); //left
-    glTranslatef(0, 0, 9 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 9 * gameLength, 32, 5); //left
+    glTranslatef(0, 0, 9 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 7 * len, 32, 5); //down
-    glTranslatef(0, 0, 7 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 7 * gameLength, 32, 5); //down
+    glTranslatef(0, 0, 7 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //right
-    glTranslatef(0, 0, 3 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //right
+    glTranslatef(0, 0, 3 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //down
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //down
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //left
     glPopMatrix();
     //draw the furthest wall (lower half)
     glPushMatrix();
-    glTranslatef(0, 0, 11 * len);
+    glTranslatef(0, 0, 11 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 9 * len, 32, 5); //left
-    glTranslatef(0, 0, 9 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 9 * gameLength, 32, 5); //left
+    glTranslatef(0, 0, 9 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 8 * len, 32, 5); //up
-    glTranslatef(0, 0, 8 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 8 * gameLength, 32, 5); //up
+    glTranslatef(0, 0, 8 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //right
-    glTranslatef(0, 0, 3 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //right
+    glTranslatef(0, 0, 3 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5); //up
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5); //up
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 3 * len, 32, 5); //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 3 * gameLength, 32, 5); //left
     glPopMatrix();
 
     //upper right rectangles
     glPushMatrix();
-    glTranslatef(-2 * len, 0, -8 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //down
-    glTranslatef(0, 0, 1 * len);
+    glTranslatef(-2 * gameLength, 0, -8 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //left
-    glTranslatef(0, 0, 2 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //left
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //up
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //up
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //right
     glPopMatrix();
     glPushMatrix();
-    glTranslatef(-6 * len, 0, -8 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //down
-    glTranslatef(0, 0, 1 * len);
+    glTranslatef(-6 * gameLength, 0, -8 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //left
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //left
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //up
-    glTranslatef(0, 0, 1 * len);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //up
+    glTranslatef(0, 0, 1 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //right
     glPopMatrix();
 
     //T-shape
     glPushMatrix();
-    glTranslatef(-4 * len, 0, -5 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 4 * len, 32, 5);  //down
-    glTranslatef(0, 0, 2 * len);
+    glTranslatef(-4 * gameLength, 0, -5 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 4 * gameLength, 32, 5);  //down
+    glTranslatef(0, 0, 2 * gameLength);
     glRotatef(90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //right
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //right
     glPopMatrix();
     //another T-shape
     glPushMatrix();
-    glTranslatef(-4 * len, 0, 7 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
-    glTranslatef(2 * len, 0, 2 * len);
+    glTranslatef(-4 * gameLength, 0, 7 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
+    glTranslatef(2 * gameLength, 0, 2 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 5 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 5 * gameLength, 32, 5);  //left
     glPopMatrix();
 
     //L shape
     glPushMatrix();
-    glTranslatef(-6 * len, 0, 5 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
+    glTranslatef(-6 * gameLength, 0, 5 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //left
     glPopMatrix();
     //line
     glPushMatrix();
-    glTranslatef(-2 * len, 0, 5 * len);
+    glTranslatef(-2 * gameLength, 0, 5 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //left
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(-4 * len, 0, 1 * len);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 2 * len, 32, 5);  //down
+    glTranslatef(-4 * gameLength, 0, 1 * gameLength);
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 2 * gameLength, 32, 5);  //down
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(-8 * len, 0, 7 * len);
+    glTranslatef(-8 * gameLength, 0, 7 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //left
     glPopMatrix();
     //another line
     glPushMatrix();
-    glTranslatef(-6 * len, 0, -5 * len);
+    glTranslatef(-6 * gameLength, 0, -5 * gameLength);
     glRotatef(-90, 0, 1, 0);
-    gluCylinder(objCylinder, 0.15 * len, 0.15 * len, 1 * len, 32, 5);  //left
+    gluCylinder(objCylinder, 0.15 * gameLength, 0.15 * gameLength, 1 * gameLength, 32, 5);  //left
     glPopMatrix();
 
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-9 * len, 0, -10 * len); //line 1
+    glTranslatef(-9 * gameLength, 0, -10 * gameLength); //line 1
     drawSphere(0.1, 20, 20);
-    glTranslatef(18 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glPopMatrix();
-    glPushMatrix();
-    glTranslatef(-7 * len, 0, -8 * len); //line 3
-    drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(18 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     glPushMatrix();
-    glTranslatef(-7 * len, 0, -7 * len); //line 4
+    glTranslatef(-7 * gameLength, 0, -8 * gameLength); //line 3
     drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
-    //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-7 * len, 0, -5 * len); //line 6
+    glTranslatef(-7 * gameLength, 0, -7 * gameLength); //line 4
     drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-9 * len, 0, -3 * len); //line 8
+    glTranslatef(-7 * gameLength, 0, -5 * gameLength); //line 6
     drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glPopMatrix();
-    //add spheres at the corners, line by line
-    glPushMatrix();
-    glTranslatef(-9 * len, 0, -1 * len); //line 10
-    drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(1 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-9 * len, 0, 1 * len); //line 12
+    glTranslatef(-9 * gameLength, 0, -3 * gameLength); //line 8
     drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-9 * len, 0, 3 * len); //line 14
+    glTranslatef(-9 * gameLength, 0, -1 * gameLength); //line 10
     drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(3 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glPopMatrix();
-    //add spheres at the corners, line by line
-    glPushMatrix();
-    glTranslatef(-7 * len, 0, 5 * len); //line 16
-    drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(1 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-8 * len, 0, 7 * len); //line 18
+    glTranslatef(-9 * gameLength, 0, 1 * gameLength); //line 12
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(4 * len, 0, 0);
+    glTranslatef(4 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
+    glTranslatef(2 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glPopMatrix();
-    //add spheres at the corners, line by line
-    glPushMatrix();
-    glTranslatef(-7 * len, 0, 9 * len); //line 20
-    drawSphere(0.1, 20, 20);
-    glTranslatef(5 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(2 * len, 0, 0);
-    drawSphere(0.1, 20, 20);
-    glTranslatef(5 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     //add spheres at the corners, line by line
     glPushMatrix();
-    glTranslatef(-9 * len, 0, 11 * len); //line 22 (last)
+    glTranslatef(-9 * gameLength, 0, 3 * gameLength); //line 14
     drawSphere(0.1, 20, 20);
-    glTranslatef(18 * len, 0, 0);
+    glTranslatef(3 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(4 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(3 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glPopMatrix();
+    //add spheres at the corners, line by line
+    glPushMatrix();
+    glTranslatef(-7 * gameLength, 0, 5 * gameLength); //line 16
+    drawSphere(0.1, 20, 20);
+    glTranslatef(1 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(1 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glPopMatrix();
+    //add spheres at the corners, line by line
+    glPushMatrix();
+    glTranslatef(-8 * gameLength, 0, 7 * gameLength); //line 18
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(4 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glPopMatrix();
+    //add spheres at the corners, line by line
+    glPushMatrix();
+    glTranslatef(-7 * gameLength, 0, 9 * gameLength); //line 20
+    drawSphere(0.1, 20, 20);
+    glTranslatef(5 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(2 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glTranslatef(5 * gameLength, 0, 0);
+    drawSphere(0.1, 20, 20);
+    glPopMatrix();
+    //add spheres at the corners, line by line
+    glPushMatrix();
+    glTranslatef(-9 * gameLength, 0, 11 * gameLength); //line 22 (last)
+    drawSphere(0.1, 20, 20);
+    glTranslatef(18 * gameLength, 0, 0);
     drawSphere(0.1, 20, 20);
     glPopMatrix();
     glEndList();
@@ -700,6 +706,8 @@ void drawGameboard()
 //display func
 void display(GLFWwindow* window)
 {
+    
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0, 0, 0, 1.0); //background color is black
     glLoadIdentity();
@@ -815,6 +823,32 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    
+    
+    /*cap.set(cv::CAP_PROP_BUFFERSIZE, 3);
+
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    cap.set(cv::CAP_PROP_FOURCC, 0x32595559);
+    cap.set(cv::CAP_PROP_FPS, 25);*/
+
+    //const string streamWindow = "Stream";
+
+    if (!cap.isOpened()) {
+        cout << "No webcam, using video file" << endl;
+        cap.open("MarkerMovie.mp4");
+        if (cap.isOpened() == false) {
+            cout << "No video!" << endl;
+            exit(0);
+            return -1;
+        }
+    } else cout << "Found webcam" << endl;
+
+    cv::namedWindow("test", CV_WINDOW_AUTOSIZE);
+
+
+    MarkerTracker* m = new MarkerTracker(0.070,125,125);
+
     // Set callback function for GLFW -> When the window size changes, the content will be adapted to the new window size
     glfwSetFramebufferSizeCallback(window, reshape);
 
@@ -840,8 +874,14 @@ int main(int argc, char* argv[])
         pGhost->ghostThread = std::thread(ghostAction, std::ref(*pGhost), std::ref(pacmanAgent));
     }
 
+    //pos board
+    
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
+        
+        detectMarkers(m);
+        //else take old pos
+
         // Render here
         display(window);
 
@@ -856,8 +896,101 @@ int main(int argc, char* argv[])
     }
 
 
+    cv::destroyAllWindows();
+
     // Free the memory (IMPORTANT to avoid memory leaks!!!)
     glfwTerminate();
 
     return 0;
+}
+
+
+
+
+void detectMarkers(MarkerTracker* m){
+    //if a new frame is available:
+    cv::Vec3f boardPos;
+    float distance;
+    cv::Mat frame;
+    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
+
+        if (cap.read(frame)) {
+            float results[5][16];
+            bool found[5];
+            cv::Vec2f inputPos;
+
+            //cv::imshow("test", frame);
+
+
+            m->findMarker(frame, results, found, inputPos);
+
+
+            int check = 0;
+            //calculate game board position
+            cv::Vec3f markerPoss[4];
+            
+            for (int i = 0; i < 4;i++) {
+                if (found[i]) {
+                    markerPoss[i] = {results[i][3],results[i][7],results[i][11]};
+                    check++;
+                }
+            }
+
+            if (check >= 3) {
+
+                cv::Vec3f pos1;
+                float dist1;
+                bool pos1Set = false;
+
+                if (found[0] && found[3]) {
+                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+                    
+                    pos1Set = true;
+
+                    boardPos = pos1;
+
+                }
+
+
+                cv::Vec3f pos2;
+                float dist2;
+                bool pos2Set = false;
+
+                if (found[1] && found[2]) {
+                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+
+                    pos2Set = true;
+
+                    boardPos = pos2;
+                }
+
+                if (check == 4) {
+                    boardPos = 0.5 * pos1 + 0.5 * pos2;
+                }
+
+                //do rotation here
+
+
+                
+
+            }
+
+            const float deadZoneRange = 0.5f;
+            //we calculate the mouvement direction
+            int mouvement; //0 = Right, 1= left, 2=up, 3= down
+            if (found[4]){
+                float Xdistance = inputPos[0]-originX;
+                float Ydistance = inputPos[1]-originY;
+
+                bool isXmovement = (Xdistance > Ydistance);
+                
+                if (isXmovement && Xdistance > deadZoneRange){
+                    mouvement = (Xdistance > 0) ? 0 : 1;
+                } else if (Ydistance > deadZoneRange){
+                    mouvement = (Ydistance > 0) ? 2 : 3;
+                }
+            }
+            
+            
+        }
 }

@@ -11,7 +11,7 @@ typedef std::chrono::steady_clock::time_point time_point;
 typedef float speed;
 const speed HIGH = 4;
 const speed LOW = 1.5;
-extern int map[22][19];
+extern int gameMap[22][19];
 
 class Ghost
 {

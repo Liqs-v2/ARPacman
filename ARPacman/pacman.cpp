@@ -10,8 +10,8 @@ Pacman::Pacman() : colorR(1.0f), colorG(1.0f), colorB(1.0f)
 {
     //setting initial speed and location
     x = 0.0f;
-    z = 6 * len;
-    speed = 0.1 * len; //per second
+    z = 6 * gameLength;
+    speed = 0.1 * gameLength; //per second
     killed = false;
     countEats = 0;
     totalEatsToWin = 156;
@@ -25,7 +25,7 @@ void Pacman::respawn()
     Sleep(1000);
     //back to starting point
     this->x = 0.0f;
-    this->z = 6 * len;
+    this->z = 6 * gameLength;
 }
 //set color
 void Pacman::setColor(float R, float G, float B)
@@ -39,28 +39,28 @@ void Pacman::setColor(float R, float G, float B)
 void Pacman::moveUp()
 {
     //check walls. see if moving up one step would crash onto a wall
-    int zTemp = round((z - 1 * len) / len) + 10;
-    int xTemp = round(x / len) + 9;
+    int zTemp = round((z - 1 * gameLength) / gameLength) + 10;
+    int xTemp = round(x / gameLength) + 9;
     //if the intended move is illegal, continue move at the old direction
-    if (map[zTemp][xTemp] == WALL)
+    if (gameMap[zTemp][xTemp] == WALL)
     {
         pacMoveDir = oldPacMoveDir;
         return;
     }
-    else if (map[zTemp][xTemp] == POWERPELLET)
+    else if (gameMap[zTemp][xTemp] == POWERPELLET)
     {
         manager.powerUpEaten = true;
         countEats++;
     }
-    else if (map[zTemp][xTemp] == PELLET)
+    else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
     }
     Sleep(10 / speed);
     //if the move is legal, update coordinates
-    z -= 1 * len;
-    //set wherever the pacman went to "EMPTY"
-    map[zTemp][xTemp] = EMPTY;
+    z -= 1 * gameLength;
+    //set wherever the pacman went to "EMPTYSPACE"
+    gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
     //in the displayfunc(),call drawPacman() to move the pacman image up
@@ -68,28 +68,28 @@ void Pacman::moveUp()
 void Pacman::moveDown()
 {
     //check walls
-    int zTemp = round((z + len) / len) + 10;
-    int xTemp = round(x / len) + 9;
+    int zTemp = round((z + gameLength) / gameLength) + 10;
+    int xTemp = round(x / gameLength) + 9;
     //if the intended move is illegal, continue move at the old direction
-    if (map[zTemp][xTemp] == WALL)
+    if (gameMap[zTemp][xTemp] == WALL)
     {
         pacMoveDir = oldPacMoveDir;
         return;
     }
-    else if (map[zTemp][xTemp] == POWERPELLET)
+    else if (gameMap[zTemp][xTemp] == POWERPELLET)
     {
         manager.powerUpEaten = true;
         countEats++;
     }
-    else if (map[zTemp][xTemp] == PELLET)
+    else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
     }
     Sleep(10 / speed);
     //update coordinates
-    z += 1 * len;
-    //set wherever the pacman went to "EMPTY"
-    map[zTemp][xTemp] = EMPTY;
+    z += 1 * gameLength;
+    //set wherever the pacman went to "EMPTYSPACE"
+    gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
     //in the displayfunc(),call drawPacman() to move the pacman image up
@@ -97,34 +97,34 @@ void Pacman::moveDown()
 void Pacman::moveLeft()
 {
     //check walls
-    int zTemp = round(z / len) + 10;
-    int xTemp = round((x - len) / len) + 9;
+    int zTemp = round(z / gameLength) + 10;
+    int xTemp = round((x - gameLength) / gameLength) + 9;
     //it's ok to pass special spots
     if (zTemp == 10 && xTemp == -1)
     {
-        x = 9 * len;
+        x = 9 * gameLength;
         return;
     }
     //if the intended move is illegal, continue move at the old direction
-    if (map[zTemp][xTemp] == WALL)
+    if (gameMap[zTemp][xTemp] == WALL)
     {
         pacMoveDir = oldPacMoveDir;
         return;
     }
-    else if (map[zTemp][xTemp] == POWERPELLET)
+    else if (gameMap[zTemp][xTemp] == POWERPELLET)
     {
         manager.powerUpEaten = true;
         countEats++;
     }
-    else if (map[zTemp][xTemp] == PELLET)
+    else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
     }
     Sleep(10 / speed);
     //update coordinates
-    x -= 1 * len;
-    //set wherever the pacman went to "EMPTY"
-    map[zTemp][xTemp] = EMPTY;
+    x -= 1 * gameLength;
+    //set wherever the pacman went to "EMPTYSPACE"
+    gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
     //in the displayfunc(),call drawPacman() to move the pacman image up
@@ -132,34 +132,34 @@ void Pacman::moveLeft()
 void Pacman::moveRight()
 {
     //check walls
-    int zTemp = round(z / len) + 10;
-    int xTemp = round((x + len) / len) + 9;
+    int zTemp = round(z / gameLength) + 10;
+    int xTemp = round((x + gameLength) / gameLength) + 9;
     //it's ok to pass special spots
     if (zTemp == 10 && xTemp == 19)
     {
-        x = -9 * len;
+        x = -9 * gameLength;
         return;
     }
     //if the intended move is illegal, continue move at the old direction
-    if (map[zTemp][xTemp] == WALL)
+    if (gameMap[zTemp][xTemp] == WALL)
     {
         pacMoveDir = oldPacMoveDir;
         return;
     }
-    else if (map[zTemp][xTemp] == POWERPELLET)
+    else if (gameMap[zTemp][xTemp] == POWERPELLET)
     {
         manager.powerUpEaten = true;
         countEats++;
     }
-    else if (map[zTemp][xTemp] == PELLET)
+    else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
     }
     Sleep(10 / speed);
     //update coordinates
-    x += 1 * len;
-    //set wherever the pacman went to "EMPTY"
-    map[zTemp][xTemp] = EMPTY;
+    x += 1 * gameLength;
+    //set wherever the pacman went to "EMPTYSPACE"
+    gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
 }

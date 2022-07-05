@@ -11,6 +11,29 @@
 #include "MarkerTracker.h"
 #include "PoseEstimation.h"
 
+#define EX5 1
+#define EX5_RAW 0
+#define DRAW_CONTOUR 0
+#define DRAW_RECTANGLE 0
+
+#define THICKNESS_VALUE 4
+
+using namespace cv;
+using namespace std;
+
+struct MyStrip {
+	int stripeLength;
+	int nStop;
+	int nStart;
+	Point2f stripeVecX;
+	Point2f stripeVecY;
+};
+
+
+// List of points
+typedef vector<Point> contour_t;
+// List of contours
+typedef vector<contour_t> contour_vector_t;
 
 void trackbarHandler( int pos, void* slider_value ) {
 	*( (int*)slider_value ) = pos;
@@ -20,8 +43,46 @@ void bw_trackbarHandler(int pos, void* slider_value ) {
 	*( (int*)slider_value ) = pos;
 }
 
+Mat calculate_Stripe(double dx, double dy, MyStrip& st) {
+	// Norm (euclidean distance) from the direction vector is the length (derived from the Pythagoras Theorem)
+	double diffLength = sqrt(dx * dx + dy * dy);
 
-int subpixSampleSafe ( const cv::Mat &pSrc, const cv::Point2f &p )
+	// Length proportional to the marker size
+	st.stripeLength = (int)(0.8 * diffLength);
+
+	if (st.stripeLength < 5)
+		st.stripeLength = 5;
+
+	// Make stripeLength odd (because of the shift in nStop), Example 6: both sides of the strip must have the same length XXXOXXX
+	st.stripeLength |= 1;
+	/*if (st.stripeLength % 2 == 0)
+		st.stripeLength++;*/
+
+		// E.g. stripeLength = 5 --> from -2 to 2: Shift -> half top, the other half bottom
+	st.nStop = st.stripeLength >> 1;
+	//st.nStop = st.stripeLength / 2;
+	st.nStart = -st.nStop;
+
+	Size stripeSize;
+
+	// Sample a strip of width 3 pixels
+	stripeSize.width = 3;
+	stripeSize.height = st.stripeLength;
+
+	// Normalized direction vector
+	st.stripeVecX.x = dx / diffLength;
+	st.stripeVecX.y = dy / diffLength;
+
+	// Normalized perpendicular vector
+	st.stripeVecY.x = st.stripeVecX.y;
+	st.stripeVecY.y = -st.stripeVecX.x;
+
+	// 8 bit unsigned char with 1 channel, gray
+	return Mat(stripeSize, CV_8UC1);
+}
+
+
+int subpixSampleSafe ( const Mat &pSrc, const Point2f &p )
 {
 	int x = int( floorf ( p.x ) );
 	int y = int( floorf ( p.y ) );
@@ -43,18 +104,6 @@ int subpixSampleSafe ( const cv::Mat &pSrc, const cv::Point2f &p )
 void MarkerTracker::init()
 {
 	std::cout << "Startup\n";
-	cv::namedWindow(kWinName1, CV_WINDOW_AUTOSIZE);
-    cv::namedWindow(kWinName2, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(kWinName3, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(kWinName4, 0 );
-	cvResizeWindow("Marker", 120, 120 );
-
-	int max = 255;
-	int slider_value = 100;
-	cv::createTrackbar( "Threshold", kWinName2, &slider_value, 255, trackbarHandler, &slider_value);
-
-	int bw_sileder_value = bw_thresh;
-	cv::createTrackbar( "BW Threshold", kWinName2, &slider_value, 255, bw_trackbarHandler, &bw_sileder_value);
 	
 	memStorage = cvCreateMemStorage();
 }
@@ -63,416 +112,622 @@ void MarkerTracker::cleanup()
 {
 	cvReleaseMemStorage (&memStorage);
 
-	cv::destroyWindow (kWinName1);
-	cv::destroyWindow (kWinName2);
-	cv::destroyWindow (kWinName3);
-	cv::destroyWindow (kWinName4);
 	std::cout << "Finished\n";
 }
 
-void MarkerTracker::findMarker( cv::Mat &img_bgr, float resultMatrix[16] )
+void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool found[5], cv::Vec2f inputPos )
 {
+
+
+	Mat grayScale;
+	Mat imgFiltered;
 	bool isFirstStripe = true;
+	imgFiltered = img_bgr.clone();
+	cvtColor(imgFiltered, grayScale, COLOR_BGR2GRAY);
 
-	bool isFirstMarker = true;
+	// Threshold to reduce the noise
+	threshold(grayScale, grayScale, thresh, 255, THRESH_BINARY);
 
+	cv::imshow("test", grayScale);
 
-	{
-		cv::cvtColor( img_bgr, img_gray, CV_BGR2GRAY );
-		cv::threshold( img_gray, img_mono, thresh, 255, CV_THRESH_BINARY);
+	contour_vector_t contours;
 
-		// Find Contours with old OpenCV APIs
-		CvSeq* contours;
-		cv::Mat img_mono_(img_mono);
+	// RETR_LIST is a list of all found contour, SIMPLE is to just save the begin and ending of each edge which belongs to the contour
+	findContours(grayScale, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
-		cvFindContours(
-			&img_mono_, memStorage, &contours, sizeof(CvContour),
-			CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE
-		);
+	//drawContours(imgFiltered, contours, -1, Scalar(0, 255, 0), 4, 1);
 
-		for (; contours; contours = contours->h_next)
-		{
-			CvSeq* result = cvApproxPoly(
-				contours, sizeof(CvContour), memStorage, CV_POLY_APPROX_DP,
-				cvContourPerimeter(contours)*0.02, 0
-			);
+	// size is always positive, so unsigned int -> size_t; if you have not initialized the vector it is -1, hence crash
+	for (size_t k = 0; k < contours.size(); k++) {
 
-			if (result->total!=4){
-				continue;
-			}
+		// -------------------------------------------------
+		
+		
+		
+		// --- Process Contour ---
+
+		contour_t approx_contour;
+
+		// Simplifying of the contour with the Ramer-Douglas-Peuker Algorithm
+		// true -> Only closed contours
+		// Approximation of old curve, the difference (epsilon) should not be bigger than: perimeter(->arcLength)*0.02
+		approxPolyDP(contours[k], approx_contour, arcLength(contours[k], true) * 0.02, true);
+
+#if DRAW_CONTOUR
+		contour_vector_t cov, aprox;
+		cov.emplace_back(contours[k]);
+		aprox.emplace_back(approx_contour);
+		if (approx_contour.size() > 1) {
+			drawContours(imgFiltered, aprox, -1, Scalar(0, 255, 0), 4, 1);
+			drawContours(imgFiltered, cov, -1, Scalar(255, 0, 0), 4, 1);
+			continue;
+		}
+#endif // DRAW_CONTOUR
+
+		Scalar QUADRILATERAL_COLOR(0, 0, 255);
+		Scalar colour;
+		// Convert to a usable rectangle
+		Rect r = boundingRect(approx_contour);
+
+#if DRAW_RECTANGLE
+		rectangle(imgFiltered, r, Scalar(0, 0, 255), 4);
+		continue;
+#endif //DRAW_RECTANGLE
+
+		// 4 Corners -> We color them
+		if (approx_contour.size() == 4) {
+			colour = QUADRILATERAL_COLOR;
+		}
+		else {
+			continue;
+		}
+
+		// --- Filter tiny ones --- If the found contour is too small (20 -> pixels, frame.cols - 10 to prevent extreme big contours)
+		if (r.height < 20 || r.width < 20 || r.width > imgFiltered.cols - 10 || r.height > imgFiltered.rows - 10) {
+			continue;
+		}
+
+		// -> Cleaning done
+
+		// 1 -> 1 contour, we have a closed contour, true -> closed, 4 -> thickness
+		polylines(imgFiltered, approx_contour, true, colour, THICKNESS_VALUE);
+
+		// Added in sheet 4 Ex10 - Start *******************************************************************
+
+		// Direction vector (x0,y0) and contained point (x1,y1) -> For each line -> 4x4 = 16
+		float lineParams[16];
+		// lineParams is shared, CV_32F -> Same data type like lineParams
+		Mat lineParamsMat(Size(4, 4), CV_32F, lineParams);
+
+		// Added in sheet 4 Ex10 - End *******************************************************************
+
+		// -----------------------------
+
+		// --- Process Corners ---
+
+		for (size_t i = 0; i < approx_contour.size(); ++i) {
+			// Render the corners, 3 -> Radius, -1 filled circle
+			circle(imgFiltered, approx_contour[i], 3, CV_RGB(0, 255, 0), -1);
 			
-			cv::Mat result_ = cv::cvarrToMat(result); /// API 1.X to 2.x
-			cv::Rect r = cv::boundingRect(result_);
-			if (r.height<20 || r.width<20 || r.width > img_mono.cols - 10 || r.height > img_mono.rows - 10) {
-				continue;
-			}
+			// Euclidic distance, 7 -> parts, both directions dx and dy
+			double dx = ((double)approx_contour[(i + 1) % 4].x - (double)approx_contour[i].x) / 7.0;
+			double dy = ((double)approx_contour[(i + 1) % 4].y - (double)approx_contour[i].y) / 7.0;
 
-			const cv::Point *rect = (const cv::Point*) result_.data;
-			int npts = result_.rows;
-			// draw the polygon
-			cv::polylines( img_bgr, &rect,&npts, 1,
-				true,           // draw closed contour (i.e. joint end to start)
-				CV_RGB(255,0,0),// colour RGB ordering (here = green)
-				2,              // line thickness
-				CV_AA, 0);
+			// Added in Sheet 3 - Start *****************************************************************
 
+			MyStrip strip;
 
-			float lineParams[16];
-			cv::Mat lineParamsMat( cv::Size(4, 4), CV_32F, lineParams); // lineParams is shared
+			// A simple array of unsigned char cv::Mat
+			Mat imagePixelStripe = calculate_Stripe(dx, dy, strip);
 
-			for (int i=0; i<4; ++i)
-			{
-				cv::circle (img_bgr, rect[i], 3, CV_RGB(0,255,0), -1);
+			// Added in Sheet 3 - End *******************************************************************
 
-				double dx = (double)(rect[(i+1)%4].x-rect[i].x)/7.0;
-				double dy = (double)(rect[(i+1)%4].y-rect[i].y)/7.0;
+			// Added in sheet 4 - Start *****************************************************************
 
-				int stripeLength = (int)(0.8*sqrt (dx*dx+dy*dy));
-				if (stripeLength < 5)
-					stripeLength = 5;
+			// Array for edge point centers
+			Point2f edgePointCenters[6];
 
-				//make stripeLength odd (because of the shift in nStop)
-				stripeLength |= 1;
+			// Added in sheet 4 - End *****************************************************************
 
-				//e.g. stripeLength = 5 --> from -2 to 2
-				int nStop  = stripeLength>>1;
-				int nStart = -nStop;
+			// First point already rendered, now the other 6 points
+			for (int j = 1; j < 7; ++j) {
+				// Position calculation
+				double px = (double)approx_contour[i].x + (double)j * dx;
+				double py = (double)approx_contour[i].y + (double)j * dy;
 
-				cv::Size stripeSize;
-				stripeSize.width = 3;
-				stripeSize.height = stripeLength;
+				Point p;
+				p.x = (int)px;
+				p.y = (int)py;
+				circle(imgFiltered, p, 2, CV_RGB(0, 0, 255), -1);
 
-				cv::Point2f stripeVecX;
-				cv::Point2f stripeVecY;
+				//------------------------------------------- EX 3 ---------------------------------------------------------
 
-				//normalize vectors
-				double diffLength = sqrt ( dx*dx+dy*dy );
-				stripeVecX.x = dx / diffLength;
-				stripeVecX.y = dy / diffLength;
+				// Columns: Loop over 3 pixels
+				for (int m = -1; m <= 1; ++m) {
+					// Rows: From bottom to top of the stripe, e.g. -3 to 3
+					for (int n = strip.nStart; n <= strip.nStop; ++n) {
+						Point2f subPixel;
 
-				stripeVecY.x =  stripeVecX.y;
-				stripeVecY.y = -stripeVecX.x;
+						// m -> going over the 3 pixel thickness of the stripe, n -> over the length of the stripe, direction comes from the orthogonal vector in st
+						// Going from bottom to top and defining the pixel coordinate for each pixel belonging to the stripe
+						subPixel.x = (double)p.x + ((double)m * strip.stripeVecX.x) + ((double)n * strip.stripeVecY.x);
+						subPixel.y = (double)p.y + ((double)m * strip.stripeVecX.y) + ((double)n * strip.stripeVecY.y);
 
-				cv::Mat iplStripe( stripeSize, CV_8UC1 );
+						Point p2;
+						p2.x = (int)subPixel.x;
+						p2.y = (int)subPixel.y;
 
-				// Array for edge point centers
-				cv::Point2f points[6];
+						// The one (purple color) which is shown in the stripe window
+						if (isFirstStripe)
+							circle(imgFiltered, p2, 1, CV_RGB(255, 0, 255), -1);
+						else
+							circle(imgFiltered, p2, 1, CV_RGB(0, 255, 255), -1);
 
-				for (int j=1; j<7; ++j)
-				{
-					double px = (double)rect[i].x+(double)j*dx;
-					double py = (double)rect[i].y+(double)j*dy;
+						// Combined Intensity of the subpixel
+						int pixelIntensity = subpixSampleSafe(grayScale, subPixel);
 
-					cv::Point p;
-					p.x = (int)px;
-					p.y = (int)py;
-					cv::circle ( img_bgr, p, 2, CV_RGB(0,0,255), -1);
+						// Converte from index to pixel coordinate
+						// m (Column, real) -> -1,0,1 but we need to map to 0,1,2 -> add 1 to 0..2
+						int w = m + 1;
 
-					for ( int m = -1; m <= 1; ++m )
-					{
-						for ( int n = nStart; n <= nStop; ++n )
-						{
-							cv::Point2f subPixel;
+						// n (Row, real) -> add stripeLenght >> 1 to shift to 0..stripeLength
+						// n=0 -> -length/2, n=length/2 -> 0 ........ + length/2
+						int h = n + (strip.stripeLength >> 1);
 
-							subPixel.x = (double)p.x + ((double)m * stripeVecX.x) + ((double)n * stripeVecY.x);
-							subPixel.y = (double)p.y + ((double)m * stripeVecX.y) + ((double)n * stripeVecY.y);
+						// Set pointer to correct position and safe subpixel intensity
+						imagePixelStripe.at<uchar>(h, w) = (uchar)pixelIntensity;
 
-							cv::Point p2;
-							p2.x = (int)subPixel.x;
-							p2.y = (int)subPixel.y;
-
-							if (isFirstStripe)
-								cv::circle ( img_bgr, p2, 1, CV_RGB(255,0,255), -1);
-							else
-								cv::circle ( img_bgr, p2, 1, CV_RGB(0,255,255), -1);
-
-							int pixel = subpixSampleSafe (img_gray, subPixel);
-
-							int w = m + 1; //add 1 to shift to 0..2
-							int h = n + ( stripeLength >> 1 ); //add stripelenght>>1 to shift to 0..stripeLength
-
-
-							iplStripe.at<uchar>(h,w) = (uchar)pixel;
-						}
+						// Added in Sheet 3 - Ex7 (a) End *****************************************************************
 					}
+				}
 
-					//use sobel operator on stripe
-					// ( -1 , -2, -1 )
-					// (  0 ,  0,  0 )
-					// (  1 ,  2,  1 )
-					std::vector<double> sobelValues(stripeLength-2);
-					for (int n = 1; n < (stripeLength-1); n++)
-					{
-						unsigned char* stripePtr = &( iplStripe.at<uchar>(n-1,0) );
-						double r1 = -stripePtr[ 0 ] - 2 * stripePtr[ 1 ] - stripePtr[ 2 ];
-						stripePtr += 2*iplStripe.step;
-						double r3 =  stripePtr[ 0 ] + 2 * stripePtr[ 1 ] + stripePtr[ 2 ];
-						sobelValues[n-1] = r1+r3;
+				// Added in Sheet 3 - Ex7 (b) Start *****************************************************************
+				// Use sobel operator on stripe
+
+				// ( -1 , -2, -1 )
+				// (  0 ,  0,  0 )
+				// (  1 ,  2,  1 )
+
+				// The first and last row must be excluded from the sobel calculation because they have no top or bottom neighbors
+				vector<double> sobelValues(strip.stripeLength - 2.);
+
+				// To use the kernel we start with the second row (n) and stop before the last one
+				for (int n = 1; n < (strip.stripeLength - 1); n++) {
+					// Take the intensity value from the stripe 
+					unsigned char* stripePtr = &(imagePixelStripe.at<uchar>(n - 1, 0));
+
+					// Calculation of the gradient with the sobel for the first row
+					double r1 = -stripePtr[0] - 2. * stripePtr[1] - stripePtr[2];
+
+					// r2 -> Is equal to 0 because of sobel
+
+					// Go two lines for the third line of the sobel, step = size of the data type, here uchar
+					stripePtr += 2 * imagePixelStripe.step;
+
+					// Calculation of the gradient with the sobel for the third row
+					double r3 = stripePtr[0] + 2. * stripePtr[1] + stripePtr[2];
+
+					// Writing the result into our sobel value vector
+					unsigned int ti = n - 1;
+					sobelValues[ti] = r1 + r3;
+				}
+
+				double maxIntensity = -1;
+				int maxIntensityIndex = 0;
+
+				// Finding the max value
+				for (int n = 0; n < strip.stripeLength - 2; ++n) {
+					if (sobelValues[n] > maxIntensity) {
+						maxIntensity = sobelValues[n];
+						maxIntensityIndex = n;
 					}
+				}
 
-					double maxVal = -1;
-					int maxIndex = 0;
-					for (int n=0; n<stripeLength-2; ++n)
-					{
-						if ( sobelValues[n] > maxVal )
-						{
-							maxVal = sobelValues[n];
-							maxIndex = n;
-						}
-					}
+				// Added in Sheet 3 - Ex7 (b) End *****************************************************************
 
-					double y0,y1,y2; // y0 .. y1 .. y2
-					y0 = (maxIndex <= 0) ? 0 : sobelValues[maxIndex-1];
-					y1 = sobelValues[maxIndex];
-					y2 = (maxIndex >= stripeLength-3) ? 0 : sobelValues[maxIndex+1];
+				// Added in Sheet 3 - Ex7 (d) Start *****************************************************************
 
-					//formula for calculating the x-coordinate of the vertex of a parabola, given 3 points with equal distances 
-					//(xv means the x value of the vertex, d the distance between the points): 
-					//xv = x1 + (d / 2) * (y2 - y0)/(2*y1 - y0 - y2)
+				// f(x) slide 7 -> y0 .. y1 .. y2
+				double y0, y1, y2;
 
-					double pos = (y2 - y0) / (4*y1 - 2*y0 - 2*y2 ); //d = 1 because of the normalization and x1 will be added later
+				// Point before and after
+				unsigned int max1 = maxIntensityIndex - 1, max2 = maxIntensityIndex + 1;
 
-					
+				// If the index is at the border we are out of the stripe, then we will take 0
+				y0 = (maxIntensityIndex <= 0) ? 0 : sobelValues[max1];
+				y1 = sobelValues[maxIntensityIndex];
+				// If we are going out of the array of the sobel values
+				y2 = (maxIntensityIndex >= strip.stripeLength - 3) ? 0 : sobelValues[max2];
 
-					if (pos!=pos) {
-						// value is not a number
-						continue;
-					}
+				// Formula for calculating the x-coordinate of the vertex of a parabola, given 3 points with equal distances 
+				// (xv means the x value of the vertex, d the distance between the points): 
+				// xv = x1 + (d / 2) * (y2 - y0)/(2*y1 - y0 - y2)
 
-					cv::Point2f edgeCenter; //exact point with subpixel accuracy
-					int maxIndexShift = maxIndex - (stripeLength>>1);
+				// Equation system
+				// d = 1 because of the normalization and x1 will be added later
+				double pos = (y2 - y0) / (4 * y1 - 2 * y0 - 2 * y2);
 
-					//shift the original edgepoint accordingly
-					edgeCenter.x = (double)p.x + (((double)maxIndexShift+pos) * stripeVecY.x);
-					edgeCenter.y = (double)p.y + (((double)maxIndexShift+pos) * stripeVecY.y);
-
-					cv::Point p_tmp;
-					p_tmp.x = (int)edgeCenter.x;
-					p_tmp.y = (int)edgeCenter.y;
-					cv::circle ( img_bgr, p_tmp, 1, CV_RGB(0,0,255), -1);
-
-					points[j-1].x = edgeCenter.x;
-					points[j-1].y = edgeCenter.y;
-
-					if (isFirstStripe)
-					{
-						cv::Mat iplTmp;
-						cv::resize( iplStripe, iplTmp, cv::Size(100,300) );
-						cv::imshow ( kWinName3, iplTmp );//iplStripe );
-						isFirstStripe = false;
-					}
-
-				} // end of loop over edge points of one edge
-
-				// we now have the array of exact edge centers stored in "points"
-				cv::Mat mat( cv::Size(1, 6), CV_32FC2, points);
-				cv::fitLine ( mat, lineParamsMat.col(i), CV_DIST_L2, 0, 0.01, 0.01 );
-				// cvFitLine stores the calculated line in lineParams in the following way:
-				// vec.x, vec.y, point.x, point.y
-
-				cv::Point p;
-				p.x=(int)lineParams[8+i] - (int)(50.0*lineParams[i]);
-				p.y=(int)lineParams[12+i] - (int)(50.0*lineParams[4+i]);
-
-				cv::Point p2;
-				p2.x = (int)lineParams[8+i] + (int)(50.0*lineParams[i]);
-				p2.y = (int)lineParams[12+i] + (int)(50.0*lineParams[4+i]);
-
-				cv::line ( img_bgr, p, p2, CV_RGB(0,255,255), 1, 8, 0);
-
-			} // end of loop over the 4 edges
-
-			// so far we stored the exact line parameters and show the lines in the image
-			// now we have to calculate the exact corners
-			cv::Point2f corners[4];
-
-			for (int i=0; i<4; ++i)
-			{
-				int j = (i+1)%4;
-				double x0,x1,y0,y1,u0,u1,v0,v1;
-				x0 = lineParams[i+8]; y0 = lineParams[i+12];
-				x1 = lineParams[j+8]; y1 = lineParams[j+12];
-
-				u0 = lineParams[i]; v0 = lineParams[i+4];
-				u1 = lineParams[j]; v1 = lineParams[j+4];
-
-				// (x|y) = p + s * vec
-				// s = Ds / D (see cramer's rule)
-				// (x|y) = p + (Ds / D) * vec
-				// (x|y) = (p * D / D) + (Ds * vec / D)
-				// (x|y) = (p * D + Ds * vec) / D
-				// (x|y) = a / c;
-				double a =  x1*u0*v1 - y1*u0*u1 - x0*u1*v0 + y0*u0*u1;
-				double b = -x0*v0*v1 + y0*u0*v1 + x1*v0*v1 - y1*v0*u1;
-				double c =  v1*u0-v0*u1;
-
-				if ( fabs(c) < 0.001 ) //lines parallel?
-				{
-					std::cout << "lines parallel" << std::endl;
+				// What happens when there is no solution? -> /0 or Number = other Number
+				// If the found pos is not a number -> there is no solution
+				if (isnan(pos)) {
 					continue;
 				}
+				// Check if there is a solution to the calculation, cool trick
+				/*if (pos != pos) {
+					// Value is not a number -> NAN
+					continue;
+				}*/
 
-				a /= c;
-				b /= c;
+				// Exact point with subpixel accuracy
+				Point2d edgeCenter;
 
-				//exact corner
-				corners[i].x = a; 
-				corners[i].y = b;
-				cv::Point p;
-				p.x = (int)corners[i].x;
-				p.y = (int)corners[i].y;
+				// Back to Index positioning, Where is the edge (max gradient) in the picture?
+				int maxIndexShift = maxIntensityIndex - (strip.stripeLength >> 1);
 
-				cv::circle ( img_bgr, p, 5, CV_RGB(255,255,0), -1);
-			} //finished the calculation of the exact corners
+				// Shift the original edgepoint accordingly -> Is the pixel point at the top or bottom?
+				edgeCenter.x = (double)p.x + (((double)maxIndexShift + pos) * strip.stripeVecY.x);
+				edgeCenter.y = (double)p.y + (((double)maxIndexShift + pos) * strip.stripeVecY.y);
 
-			cv::Point2f targetCorners[4];
-			targetCorners[0].x = -0.5; targetCorners[0].y = -0.5;
-			targetCorners[1].x =  5.5; targetCorners[1].y = -0.5;
-			targetCorners[2].x =  5.5; targetCorners[2].y =  5.5;
-			targetCorners[3].x = -0.5; targetCorners[3].y =  5.5;
+				// Highlight the subpixel with blue color
+				circle(imgFiltered, edgeCenter, 2, CV_RGB(0, 0, 255), -1);
 
-			//create and calculate the matrix of perspective transform
-			cv::Mat projMat( cv::Size(3, 3), CV_32FC1 );
-			projMat = cv::getPerspectiveTransform( corners, targetCorners );
+				// Added in Sheet 3 - Ex7 (d) End *****************************************************************
 
+				// Added in sheet 4 -  Start *****************************************************************
 
-			//create image for the marker
-//			markerSize.width  = 6;
-//			markerSize.height = 6;
-			cv::Mat iplMarker( cv::Size(6,6), CV_8UC1 );
+				edgePointCenters[j - 1].x = edgeCenter.x;
+				edgePointCenters[j - 1].y = edgeCenter.y;
 
-			//change the perspective in the marker image using the previously calculated matrix
-			cv::warpPerspective( img_gray, iplMarker, projMat, cv::Size(6,6) );
-			cv::threshold(iplMarker, iplMarker, bw_thresh, 255, CV_THRESH_BINARY);
+				// Added in sheet 4 - End *****************************************************************
 
-			//now we have a B/W image of a supposed Marker
+				// Added in Sheet 3 - Ex7 (c) Start *****************************************************************
 
-			// check if border is black
-			int code = 0;
-			for (int i = 0; i < 6; ++i)
-			{	
-				int pixel1 = iplMarker.at<uchar>(0,i); //top
-				int pixel2 = iplMarker.at<uchar>(5,i); //bottom
-				int pixel3 = iplMarker.at<uchar>(i,0); //left
-				int pixel4 = iplMarker.at<uchar>(i,5); //right
-				if ( ( pixel1 > 0 ) || ( pixel2 > 0 ) || ( pixel3 > 0 ) || ( pixel4 > 0 ) )
-				{
-					code = -1;
-					break;
+				// Draw the stripe in the image
+				if (isFirstStripe) {
+					Mat iplTmp;
+					// The intensity differences on the stripe
+					resize(imagePixelStripe, iplTmp, Size(100, 300));
+
+					//imshow(stripWindow, iplTmp);
+					isFirstStripe = false;
 				}
+
+				// Added in Sheet 3 - Ex7 (c) End *****************************************************************
 			}
 
-			if ( code < 0 ){
+			// Added in sheet 4 Ex9(a) - Start * ****************************************************************
+
+			// We now have the array of exact edge centers stored in "points", every row has two values -> 2 channels!
+			Mat highIntensityPoints(Size(1, 6), CV_32FC2, edgePointCenters);
+
+			// fitLine stores the calculated line in lineParams per column in the following way:
+			// vec.x, vec.y, point.x, point.y
+			// Norm 2, 0 and 0.01 -> Optimal parameters
+			// i -> Edge points
+			fitLine(highIntensityPoints, lineParamsMat.col(i), CV_DIST_L2, 0, 0.01, 0.01);
+			// We need two points to draw the line
+			Point p1;
+			// We have to jump through the 4x4 matrix, meaning the next value for the wanted line is in the next row -> +4
+			// d = -50 is the scalar -> Length of the line, g: Point + d*Vector
+			// p1<----Middle---->p2
+			//   <-----100----->
+			p1.x = (int)lineParams[8 + i] - (int)(50.0 * lineParams[i]);
+			p1.y = (int)lineParams[12 + i] - (int)(50.0 * lineParams[4 + i]);
+
+			Point p2;
+			p2.x = (int)lineParams[8 + i] + (int)(50.0 * lineParams[i]);
+			p2.y = (int)lineParams[12 + i] + (int)(50.0 * lineParams[4 + i]);
+
+			// Draw line
+			line(imgFiltered, p1, p2, CV_RGB(0, 255, 255), 1, 8, 0);
+
+			// Added in sheet 4 Ex9 (a)- End *******************************************************************
+		}
+
+		// Added in sheet 4 Ex9 (b)- Start *****************************************************************
+
+		// So far we stored the exact line parameters and show the lines in the image now we have to calculate the exact corners
+		Point2f corners[4];
+
+		// Calculate the intersection points of both lines
+		for (int i = 0; i < 4; ++i) {
+			// Go through the corners of the rectangle, 3 -> 0
+			int j = (i + 1) % 4;
+
+			double x0, x1, y0, y1, u0, u1, v0, v1;
+
+			// We have to jump through the 4x4 matrix, meaning the next value for the wanted line is in the next row -> +4
+			// g: Point + d*Vector
+			// g1 = (x0,y0) + scalar0*(u0,v0) == g2 = (x1,y1) + scalar1*(u1,v1)
+			x0 = lineParams[i + 8]; y0 = lineParams[i + 12];
+			x1 = lineParams[j + 8]; y1 = lineParams[j + 12];
+
+			// Direction vector
+			u0 = lineParams[i]; v0 = lineParams[i + 4];
+			u1 = lineParams[j]; v1 = lineParams[j + 4];
+
+			// (x|y) = p + s * vec --> Vector Equation
+
+			// (x|y) = p + (Ds / D) * vec
+
+			// p0.x = x0; p0.y = y0; vec0.x= u0; vec0.y=v0;
+				// p0 + s0 * vec0 = p1 + s1 * vec1
+				// p0-p1 = vec(-vec0 vec1) * vec(s0 s1)	
+
+				// s0 = Ds0 / D (see cramer's rule)
+				// s1 = Ds1 / D (see cramer's rule)   
+				// Ds0 = -(x0-x1)v1 + (y0-y1)u1 --> You need to just calculate one, here Ds0
+
+			// (x|y) = (p * D / D) + (Ds * vec / D)
+			// (x|y) = (p * D + Ds * vec) / D
+
+				// x0 * D + Ds0 * u0 / D    or   x1 * D + Ds1 * u1 / D     --> a / D
+				// y0 * D + Ds0 * v0 / D    or   y1 * D + Ds1 * v1 / D     --> b / D						   		
+
+			// (x|y) = a / c;
+
+			// Cramer's rule
+			// 2 unknown a,b -> Equation system
+			double a = x1 * u0 * v1 - y1 * u0 * u1 - x0 * u1 * v0 + y0 * u0 * u1;
+			double b = -x0 * v0 * v1 + y0 * u0 * v1 + x1 * v0 * v1 - y1 * v0 * u1;
+
+			// Calculate the cross product to check if both direction vectors are parallel -> = 0
+			// c -> Determinant = 0 -> linear dependent -> the direction vectors are parallel -> No division with 0
+			double c = v1 * u0 - v0 * u1;
+			if (fabs(c) < 0.001) {
+				//std::cout << "lines parallel" << std::endl;
 				continue;
 			}
 
-			//copy the BW values into cP
-			int cP[4][4];
-			for ( int i=0; i < 4; ++i)
-			{
-				for ( int j=0; j < 4; ++j)
-				{
-					cP[i][j] = iplMarker.at<uchar>(i+1,j+1);
-					cP[i][j] = (cP[i][j]==0) ? 1 : 0; //if black then 1 else 0
-				}
+			// We have checked for parallelism of the direction vectors
+			// -> Cramer's rule, now divide through the main determinant
+			a /= c;
+			b /= c;
+
+			// Exact corner
+			corners[i].x = a;
+			corners[i].y = b;
+
+			// Added in sheet 4 Ex9 (b)- End *******************************************************************
+
+			Point p;
+			p.x = (int)corners[i].x;
+			p.y = (int)corners[i].y;
+
+			// Added in sheet 4 Ex9 (c)- Start *****************************************************************
+
+			circle(imgFiltered, p, 5, CV_RGB(255, 255, 0), -1);
+
+			// Added in sheet 4 Ex9 (c)- End *******************************************************************
+
+		} // End of the loop to extract the exact corners
+
+		// Added in sheet 4 Ex10 (a)- Start *****************************************************************
+
+		// Coordinates on the original marker images to go to the actual center of the first pixel -> 6x6
+		Point2f targetCorners[4];
+		targetCorners[0].x = -0.5; targetCorners[0].y = -0.5;
+		targetCorners[1].x = 5.5; targetCorners[1].y = -0.5;
+		targetCorners[2].x = 5.5; targetCorners[2].y = 5.5;
+		targetCorners[3].x = -0.5; targetCorners[3].y = 5.5;
+
+		// Create and calculate the matrix of perspective transform -> non-affine -> parallel stays not parallel
+		// Homography is a matrix to describe the transformation from an image region to the 2D projected image
+		Mat homographyMatrix(Size(3, 3), CV_32FC1);
+		// Corner which we calculated and our target Mat, find the transformation
+		homographyMatrix = getPerspectiveTransform(corners, targetCorners);
+
+		// Added in sheet 4 Ex10 (a)- End *******************************************************************
+
+		// Added in sheet 4 Ex10 (b)- Start *****************************************************************
+
+		// Create image for the marker
+		Mat imageMarker(Size(6, 6), CV_8UC1);
+
+		// Change the perspective in the marker image using the previously calculated Homography Matrix
+		// In the Homography Matrix there is also the position in the image saved
+		warpPerspective(grayScale, imageMarker, homographyMatrix, Size(6, 6));
+
+		// Added in sheet 4 Ex10 (b)- End *******************************************************************
+
+		// Now we have a B/W image of a supposed Marker
+		threshold(imageMarker, imageMarker, bw_thresh, 255, CV_THRESH_BINARY);
+
+		// Added in sheet 4 Ex10 (c)- Start *****************************************************************
+
+		int code = 0;
+		for (int i = 0; i < 6; ++i) {
+			// Check if border is black
+			int pixel1 = imageMarker.at<uchar>(0, i); //top
+			int pixel2 = imageMarker.at<uchar>(5, i); //bottom
+			int pixel3 = imageMarker.at<uchar>(i, 0); //left
+			int pixel4 = imageMarker.at<uchar>(i, 5); //right
+
+			// 0 -> black
+			if ((pixel1 > 0) || (pixel2 > 0) || (pixel3 > 0) || (pixel4 > 0)) {
+				code = -1;
+				break;
 			}
+		}
 
-			//save the ID of the marker
-			int codes[4];
-			codes[0] = codes[1] = codes[2] = codes[3] = 0;
-			for (int i=0; i < 16; i++)
-			{
-				int row = i>>2;
-				int col = i%4;
+		if (code < 0) {
+			continue;
+		}
 
-				codes[0] <<= 1;
-				codes[0] |= cP[row][col]; // 0°
-
-				codes[1] <<= 1;
-				codes[1] |= cP[3-col][row]; // 90°
-
-				codes[2] <<= 1;
-				codes[2] |= cP[3-row][3-col]; // 180°
-
-				codes[3] <<= 1;
-				codes[3] |= cP[col][3-row]; // 270°
+		// Copy the BW values into cP -> codePixel on the marker 4x4 (inner part of the marker, no black border)
+		int cP[4][4];
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < 4; ++j) {
+				// +1 -> no borders!
+				cP[i][j] = imageMarker.at<uchar>(i + 1, j + 1);
+				// If black then 1 else 0
+				cP[i][j] = (cP[i][j] == 0) ? 1 : 0;
 			}
+		}
 
-			if ( (codes[0]==0) || (codes[0]==0xffff) ){
-				continue;
+		// Save the ID of the marker, for each side
+		int codes[4];
+		codes[0] = codes[1] = codes[2] = codes[3] = 0;
+
+		// Calculate the code from all sides in one loop
+		for (int i = 0; i < 16; i++) {
+			// /4 to go through the rows
+			int row = i >> 2;
+			int col = i % 4;
+
+			// Multiplied by 2 to check for black values -> 0*2 = 0
+			codes[0] <<= 1;
+			codes[0] |= cP[row][col]; // 0°
+
+			// 4x4 structure -> Each column represents one side 
+			codes[1] <<= 1;
+			codes[1] |= cP[3 - col][row]; // 90°
+
+			codes[2] <<= 1;
+			codes[2] |= cP[3 - row][3 - col]; // 180°
+
+			codes[3] <<= 1;
+			codes[3] |= cP[col][3 - row]; // 270°
+
+			/*cout << "iteration: " << dec << i << endl;
+			cout << "Code 0: " << hex << codes[0] << endl;
+			cout << "Code 1: " << hex << codes[1] << endl;
+			cout << "Code 2: " << hex << codes[2] << endl;
+			cout << "Code 3: " << hex << codes[3] << endl;*/
+		}
+
+		// Account for symmetry -> One side complete white or black
+		if ((codes[0] == 0) || (codes[0] == 0xffff)) {
+			continue;
+		}
+
+		// Added in Exercise 5 - Start *****************************************************************
+
+		int angle = 0;
+
+		// Added in Exercise 5 - End *******************************************************************
+
+		// Search for the smallest marker ID
+		code = codes[0];
+		for (int i = 1; i < 4; ++i) {
+			if (codes[i] < code) {
+				code = codes[i];
+
+				// Added in Exercise 5 - Start *****************************************************************
+
+				angle = i;
+
+				// Added in Exercise 5 - End *******************************************************************
 			}
+		}
 
-			//account for symmetry
-			code = codes[0];
-			int angle = 0;
-			for ( int i=1; i<4; ++i )
-			{
-				if ( codes[i] < code )
-				{
-					code = codes[i];
-					angle = i;
-				}
+		int markerID = 0;
+		switch (code) {
+		case 0x1C44:
+			markerID = 0;
+			break;
+		case 0x0690:
+			markerID = 1;
+			break;
+		case 0x0B44:
+			markerID = 2;
+			break;
+		case 0x1228:
+			markerID = 3;
+			break;
+		case 0x005A:
+			markerID = 4;
+			break;
+		default:
+			continue;
+		}
+
+		found[markerID] = true;
+
+		// Print ID
+		//printf("Found: %04x\n", code);
+		cout << "Marker " << code << " known as ID " << markerID << endl;
+		// Added in sheet 4 Ex10 (c)- End *****************************************************************
+
+		// Added in sheet 4 - End *******************************************************************
+
+		// Added in Exercise 5 - Start *****************************************************************
+
+		// Correct the order of the corners, if 0 -> already have the 0 degree position
+		/* TASK: How to make sure, that we always have the correct order? */
+		if (angle != 0) {
+			Point2f corrected_corners[4];
+			// Smallest id represents the x-axis, we put the values in the corrected_corners array
+			for (int i = 0; i < 4; i++)	corrected_corners[(angle + i) % 4] = corners[i];
+			//for (int i = 0; i < 4; i++)	corrected_corners[i] = corners[(angle + i) % 4];
+			// We put the values back in the array in the sorted order
+			for (int i = 0; i < 4; i++)	corners[i] = corrected_corners[i];
+		}
+
+		// Normally we should do a camera calibration to get the camera paramters such as focal length
+		// Two ways: Inner parameters, e.g. focal length (intrinsic parameters); camera with 6 dof (R|T) (extrinsic parameters)
+		// Transfer screen coords to camera coords -> To get to the principal point
+		for (int i = 0; i < 4; i++) {
+			// Here you have to use your own camera resolution (x) * 0.5
+			//corners[i].x -= 320;
+			corners[i].x -= img_bgr.cols * 0.5f;
+			// -(corners.y) -> is needed because y is inverted
+			// Here you have to use your own camera resolution (y) * 0.5
+			//corners[i].y = -corners[i].y + 240;
+			corners[i].y = -corners[i].y + img_bgr.rows * 0.5f;
+		}
+
+		if (markerID == 4) {
+			inputPos = 0;
+
+			for (int i = 0; i < 4;i++) {
+				Vec2f tmp = {corners[i].x, corners[i].y};
+				inputPos = inputPos + (tmp*0.25f);
 			}
+		}
 
-			printf ("Found: %04x\n", code);
 
-			if ( isFirstMarker )
-			{
-				cv::imshow ( kWinName4, iplMarker );
-				isFirstMarker = false;
+		// 4x4 -> Rotation | Translation
+		//        0  0  0  | 1 -> (Homogene coordinates to combine rotation, translation and scaling)
+		//float resultMatrix[5][16];
+		// Marker size in meters!
+		estimateSquarePose(resultMatrix[markerID], (Point2f*)corners, 0.068);// previously 0.04346
+
+
+		continue;
+		// This part is only for printing
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < 4; ++j) {
+				cout << setw(6); // Total 6
+				cout << setprecision(4); // Numbers of decimal places = 4 (of the 6)
+				// Again we are going through a matrix which is saved as an array
+				cout << resultMatrix[markerID][4 * i + j] << " ";
 			}
+			cout << "\n";
+		}
+		cout << "\n";
+		float x, y, z;
+		// Translation values in the transformation matrix to calculate the distance between the marker and the camera
+		x = resultMatrix[markerID][3];
+		y = resultMatrix[markerID][7];
+		z = resultMatrix[markerID][11];
+		/* TASK: How can we calculate the distance? -> HINT: E... */
+		cout << "length: " << sqrt(x * x + y * y + z * z) << "\n";
+		cout << "\n";
 
-			//correct the order of the corners
-			if(angle != 0)
-			{
-				cv::Point2f corrected_corners[4];
-				for(int i = 0; i < 4; i++)	corrected_corners[(i + angle)%4] = corners[i];
-				for(int i = 0; i < 4; i++)	corners[i] = corrected_corners[i];
-			}
+		// Added in Exercise 5 - End *****************************************************************
 
-			// transfer screen coords to camera coords
-			for(int i = 0; i < 4; i++)
-			{
-				corners[i].x -= img_bgr.cols*0.5; //here you have to use your own camera resolution (x) * 0.5
-				corners[i].y = -corners[i].y + img_bgr.rows*0.5; //here you have to use your own camera resolution (y) * 0.5
-			}
-			
+		// -----------------------------
 
-			estimateSquarePose( resultMatrix, (cv::Point2f*)corners, kMarkerSize );
+		// -----------------------------
+	}
 
-			//this part is only for printing
-			for (int i = 0; i<4; ++i) {
-				for (int j = 0; j<4; ++j) {
-					std::cout << std::setw(6);
-					std::cout << std::setprecision(4);
-					std::cout << resultMatrix[4*i+j] << " ";
-				}
-				std::cout << "\n";
-			}
-			std::cout << "\n";
-			float x,y,z;
-			x = resultMatrix[3];
-			y = resultMatrix[7];
-			z = resultMatrix[11];
-			std::cout << "length: " << sqrt(x*x+y*y+z*z) << "\n";
-			std::cout << "\n";
-		} // end of loop over contours
+	isFirstStripe = true;
 
-		cv::imshow(kWinName1, img_bgr);
-		cv::imshow(kWinName2, img_mono);
+	// Added in sheet 4 - Start *****************************************************************
+	// Added in sheet 4 - End *******************************************************************
 
-
-
-		isFirstStripe = true;
-
-		isFirstMarker = true;
-
-
-		cvClearMemStorage ( memStorage );
-	} // end of main loop
-
-	cvClearMemStorage ( memStorage );
-
-	int key = cvWaitKey (10);
-	if (key == 27) exit(0);
+	if (waitKey(10) == 27) {
+		return;
+	}
 }
