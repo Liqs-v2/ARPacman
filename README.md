@@ -8,11 +8,11 @@ Team project for the course IN2018 Erweiterte Realität in the summer semester 2
 **VC++ Directories:**
 
 Include Directories:
-C:\<PATH>\ARPacman\ARPacman\Libraries\include
+$(SolutionDir)\Libraries\include
 C:\opencv\build\include
 
 Library Directories:
-C:\<PATH>\ARPacman\ARPacman\Libraries\lib
+$(SolutionDir)\Libraries\lib
 C:\opencv\build\x64\vc15\lib
 
 **Linker:**

@@ -72,27 +72,27 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\opencv\build\include;$(SolutionDir)\Libraries\include;$(IncludePath)</IncludePath>
     <LibraryWPath>$(LibraryWPath)</LibraryWPath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(SolutionDir)\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\opencv\build\include;$(SolutionDir)\Libraries\include;$(IncludePath)</IncludePath>
     <LibraryWPath>$(LibraryWPath)</LibraryWPath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(SolutionDir)\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\opencv\build\include;$(SolutionDir)\Libraries\include;$(IncludePath)</IncludePath>
     <LibraryWPath>$(LibraryWPath)</LibraryWPath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(SolutionDir)\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\opencv\build\include;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\opencv\build\include;$(SolutionDir)\Libraries\include;$(IncludePath)</IncludePath>
     <LibraryWPath>$(LibraryWPath)</LibraryWPath>
-    <LibraryPath>C:\opencv\build\x64\vc15\lib;C:\Augmented Reality\01_ARPacman\ARPacman\ARPacman\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc15\lib;$(SolutionDir)\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
