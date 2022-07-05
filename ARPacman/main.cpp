@@ -1,22 +1,47 @@
-#include <Windows.h>
-#include "Pacman.h"
-#include "Ghost.h"
-#include "gameManager.h"
+﻿#include <windows.h>
 #include <GLFW/glfw3.h>
 #include <GL/GLU.h>
 #include "DrawPrimitives.h"
 #include <iostream>
 #include <iomanip>
 
-//#include <opencv2/highgui.hpp>
-//#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-//#include "PoseEstimation.h"
+#include "PoseEstimation.h"
+#include "MarkerTracker.h"
+
+#include "Pacman.h"
+#include "Ghost.h"
+#include "gameManager.h"
 
 using namespace std;
+
+cv::VideoCapture cap;
+
+// Camera settings
+const int camera_width = 640;
+const int camera_height = 480;
+const int virtual_camera_angle = 30;
+unsigned char bkgnd[camera_width * camera_height * 3];
+
+void initVideoStream(cv::VideoCapture& cap) {
+    if (cap.isOpened())
+        cap.release();
+
+    cap.open(1);
+    if (cap.isOpened() == false) {
+        std::cout << "No webcam found, using a video file" << std::endl;
+        cap.open("MarkerMovie.MP4");
+        if (cap.isOpened() == false) {
+            std::cout << "No video file found. Exiting." << std::endl;
+            exit(0);
+        }
+    }
+}
 
 
 // Gameboard
@@ -75,6 +100,16 @@ void reshape(GLFWwindow* window, int width, int height)
 
 ///* Program & OpenGL initialization */
 void init(int argc, char* argv[]) {
+
+    // For our connection between OpenCV/OpenGL
+    // Pixel storage/packing stuff -> how to handle the pixel on the graphics card
+    // For glReadPixels​ -> Pixel representation in the frame buffer
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    // For glTexImage2D​ -> Define the texture image representation
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // Turn the texture coordinates from OpenCV to the texture coordinates OpenGL
+    glPixelZoom(1.0, -1.0);
+
     // Enable and set color material -> ambient, diffuse, specular
     glEnable(GL_COLOR_MATERIAL);
     // Set background color, default is black
@@ -85,22 +120,27 @@ void init(int argc, char* argv[]) {
     glClearDepth(1.0);
 
     // Light parameters
-    GLfloat light_pos[] = { 1.0, 1.0, 1.0, 0.0 };
+    // GLfloat light_pos[] = { 1.0, 1.0, 1.0, 0.0 };
     // Light from top
     //GLfloat light_pos[] = {0, 1, 0, 0};
     // Light from bottom
     //GLfloat light_pos[] = {0, -1, 0, 0};
 
-    // Takes the object color and multiplies with the ambient value
+    // Light parameters
     GLfloat light_amb[] = { 0.2, 0.2, 0.2, 1.0 };
+    GLfloat light_pos[] = { 1.0, 1.0, 1.0, 0.0 };
+    GLfloat light_dif[] = { 0.7, 0.7, 0.7, 1.0 };
+
+    // Takes the object color and multiplies with the ambient value
+    //GLfloat light_amb[] = { 0.2, 0.2, 0.2, 1.0 };
 
     // We need the normal vector for each face of the mesh to calculate the specular and diffuse lighting parts
     // """float diff = max(dot(norm, lightDir), 0.0)"""
     // -> If the light direction is in the opposite direction of the face, then the final pixel color will be black
-    GLfloat light_dif[] = { 0.9, 0.9, 0.9, 1.0 };
+    //GLfloat light_dif[] = { 0.9, 0.9, 0.9, 1.0 };
     // Angel between the light direction and the normal of the face -> Like a mirror, the incoming light gets reflected
     // Directional light source
-    GLfloat light_spe[] = { 1, 1, 1, 1.0 };
+    //GLfloat light_spe[] = { 1, 1, 1, 1.0 };
 
     // -> All three lighting parts combined is called Phong Lighting Model
 
@@ -108,7 +148,7 @@ void init(int argc, char* argv[]) {
     glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_amb);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_dif);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_spe);
+    //glLightfv(GL_LIGHT0, GL_SPECULAR, light_spe);
     // Enable lighting
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -698,11 +738,66 @@ void drawGameboard()
 }
 
 //display func
-void display(GLFWwindow* window)
+void display(GLFWwindow* window, const cv::Mat& img_bgr, float resultMatrix[16])
+//void display(GLFWwindow * window)
 {
+    // ************************* OpenCv & OpenGL Start *****************************************************
+    // Copy picture data into bkgnd array
+    memcpy(bkgnd, img_bgr.data, sizeof(bkgnd));
+    //// ************************* OpenCv & OpenGL End *****************************************************
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0, 0, 0, 1.0); //background color is black
+    //glClearColor(0, 0, 0, 1.0); //background color is black
+    // Needed for rendering the real camera image
+    glMatrixMode(GL_MODELVIEW);
+    // No position changes
     glLoadIdentity();
+
+    //// ************************* OpenCv & OpenGL Start *****************************************************
+    glDisable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    //// Push the projection matrix (frustum) -> frustum will be saved on the stack
+    glPushMatrix();
+    //glLoadIdentity();
+    //// In the ortho view all objects stay the same size at every distance
+    //glOrtho(0.0, camera_width, 0.0, camera_height, -1, 1);
+
+    // -> Render the camera picture as background texture
+    // Making a raster of the image -> -1 otherwise overflow
+    glRasterPos2i(0, camera_height - 1);
+    // Load and render the camera image -> unsigned byte because of bkgnd as unsigned char array
+    // bkgnd 3 channels -> pixelwise rendering
+    glDrawPixels(camera_width, camera_height, GL_BGR_EXT, GL_UNSIGNED_BYTE, bkgnd);
+
+    //// Go back to the previous projection -> frustum
+    //glPopMatrix();
+
+    //// Activate depth -> that snowman can be scaled with depth
+    //glEnable(GL_DEPTH_TEST);
+
+    //// Move to marker-position
+    glMatrixMode(GL_MODELVIEW);
+
+    //// Sadly doesn't work for Windows -> so we made own solution!
+    ////glLoadTransposeMatrixf(resultMatrix);
+
+    // -> Transpose the Modelview Matrix
+    float resultTransposedMatrix[16];
+    for (int x = 0; x < 4; ++x) {
+        for (int y = 0; y < 4; ++y) {
+            // Change columns to rows
+            resultTransposedMatrix[x * 4 + y] = resultMatrix[y * 4 + x];
+        }
+    }
+
+    //// Load the transpose matrix
+    //glLoadMatrixf(resultTransposedMatrix);
+
+    //// Rotate 90 desgress in x-direction
+    //glRotatef(-90, 1, 0, 0);
+    //// Scale down!
+    //glScalef(0.03, 0.03, 0.03);
+    // ************************* OpenCv & OpenGL End *****************************************************
     // Set the camera with the y-axis pointing up
     gluLookAt(15, 15, 15, 0, 0, 0, 0, 1, 0);
     glRotatef(-angle, 0, 1, 0); //press R to rotate
@@ -833,7 +928,18 @@ int main(int argc, char* argv[])
     // Initialize the GL library
     // -> Give app arguments for configuration, e.g. depth or color should be activated or not
     init(argc, argv);
+    // ************************* OpenCv & OpenGL Start *****************************************************
+    // Setup OpenCV
+    cv::Mat img_bgr;
+    // Get video stream
+    initVideoStream(cap);
+    // [m]
+    const double kMarkerSize = 0.045;
+    // Constructor with the marker size (similar to Exercise 5)
+    MarkerTracker markerTracker(kMarkerSize);
 
+    float resultMatrix[16];
+    // ************************* OpenCv & OpenGL End *****************************************************
     manager.controlThread = std::thread(gameManager, std::ref(manager));
     for (auto pGhost : ghosts)
     {
@@ -842,8 +948,26 @@ int main(int argc, char* argv[])
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
-        // Render here
-        display(window);
+        // ************************* OpenCv & OpenGL Start *****************************************************
+        // Capture here
+        cap >> img_bgr;
+
+        // Make sure that we got a frame -> otherwise crash
+        if (img_bgr.empty()) {
+            std::cout << "Could not query frame. Trying to reinitialize." << std::endl;
+            initVideoStream(cap);
+            // Wait for one sec.
+            cv::waitKey(1000);
+            continue;
+        }
+
+        // Track a marker and get the pose of the marker
+        markerTracker.findMarker(img_bgr, resultMatrix);
+        //// Render here OpenCv & OpenGL
+        display(window, img_bgr, resultMatrix);
+        // ************************* OpenCv & OpenGL End *****************************************************
+        // Render here OpenGL
+        //display(window);
 
         // Swap front and back buffers
         // -> the front buffer is the current in the window rendered frame

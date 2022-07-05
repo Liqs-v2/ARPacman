@@ -45,8 +45,8 @@ void MarkerTracker::init()
 	std::cout << "Startup\n";
 	cv::namedWindow(kWinName1, CV_WINDOW_AUTOSIZE);
     cv::namedWindow(kWinName2, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(kWinName3, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(kWinName4, 0 );
+	//cv::namedWindow(kWinName3, CV_WINDOW_AUTOSIZE);
+	//cv::namedWindow(kWinName4, 0 );
 	cvResizeWindow("Marker", 120, 120 );
 
 	int max = 255;
@@ -83,7 +83,9 @@ void MarkerTracker::findMarker( cv::Mat &img_bgr, float resultMatrix[16] )
 
 		// Find Contours with old OpenCV APIs
 		CvSeq* contours;
-		cv::Mat img_mono_(img_mono);
+		CvMat* cvMatHeader = cvCreateMat(img_mono.rows, img_mono.cols, img_mono.type());
+		cvSetData(cvMatHeader, img_mono.data, img_mono.step);
+		CvMat img_mono_ = *(cvMatHeader);
 
 		cvFindContours(
 			&img_mono_, memStorage, &contours, sizeof(CvContour),
