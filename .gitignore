@@ -30,3 +30,7 @@
 *.app
 *.tlog
 *.ipch
+
+.vs/*
+ARPacman/.vs/*
+ARPacman/x64/Debug/*
