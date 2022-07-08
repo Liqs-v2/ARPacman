@@ -65,8 +65,12 @@ typedef enum { IDLE, UP, DOWN, LEFT, RIGHT } moveFlag;
 moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 
 GLuint gameboard = glGenLists(1);
-
-void detectMarkers(MarkerTracker* m);
+const int camera_width = 640;
+const int camera_height = 360;
+//unsigned char background[camera_width * camera_height * 3];
+unsigned char background[camera_width * camera_height * 3];
+cv::Mat frame;
+float* detectMarkers(MarkerTracker* m);
 
 //reshape
 void reshape(GLFWwindow* window, int width, int height)
@@ -74,13 +78,29 @@ void reshape(GLFWwindow* window, int width, int height)
     glViewport(0, 0, (GLsizei)width, (GLsizei)height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+
+    // Remember these frustum params!
+    float ratio = (GLfloat)width / (GLfloat)height;
+    int fov = 30;
+    float _near = 0.01f, _far = 100.f;
+    float top = tan((double)(fov * M_PI / 360.0f)) * _near;
+    float bottom = -top;
+    float left = ratio * bottom;
+    float right = ratio * top;
+    glFrustum(left, right, bottom, top, _near, _far);
+    /*
     gluPerspective(30.0, (GLfloat)width / (GLfloat)height, 1.0, 40.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    */
 }
 
 ///* Program & OpenGL initialization */
 void init(int argc, char* argv[]) {
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelZoom(1.0, -1.0);
+
     // Enable and set color material -> ambient, diffuse, specular
     glEnable(GL_COLOR_MATERIAL);
     // Set background color, default is black
@@ -704,13 +724,73 @@ void drawGameboard()
 }
 
 //display func
-void display(GLFWwindow* window)
+void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
 {
-    
+
+   float x = boardPos[3];
+    float y = boardPos[7];
+    float z = boardPos[11];
+    cout << "boardPos: [3]=" << x << " [7]=" << y << " [11]" << z << endl;
+
+    for (size_t i = 0; i < 16; i++)
+    {
+        cout << "boardPos: ["<< i <<"] = "<< boardPos[i] << endl;
+    }
+
+    float resultTransposedMatrix[16];
+    for (int x = 0; x < 4; ++x) {
+        for (int y = 0; y < 4; ++y) {
+            // Change columns to rows
+            resultTransposedMatrix[x * 4 + y] = boardPos[y * 4 + x];
+            cout << boardPos[y * 4 + x] << " " << (y * 4 + x) << endl;
+        }
+    }
+
+   // 0 4 8 12
+   // 1 5 9 13
+   // 2 6 10 14
+   // 3 7 11 15
+
+    // Copy picture data into bkgnd array
+    memcpy(background, img_bg.data, sizeof(background));
+
+    x = boardPos[3];
+    y = boardPos[7];
+    z = boardPos[11];
+    cout << "display" << x << " " << y << " " << z << endl;
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0, 0, 0, 1.0); //background color is black
+    glClearColor(0, 0, 0, 1);
+
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    glDisable(GL_DEPTH_TEST);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // In the ortho view all objects stay the same size at every distance
+    glOrtho(0.0, camera_width, 0.0, camera_height, -1, 1);
+
+    // -> Render the camera picture as background texture
+    // Making a raster of the image -> -1 otherwise overflow
+    glRasterPos2i(0, camera_height - 1);
+
+    // Load and render the camera image -> unsigned byte because of bkgnd as unsigned char array
+    // bkgnd 3 channels -> pixelwise rendering
+    glDrawPixels(camera_width, camera_height, GL_BGR_EXT, GL_UNSIGNED_BYTE, background);
+
+    glPopMatrix();
+    glEnable(GL_DEPTH_TEST);
+
+    // Specifies which matrix stack is the target for subsequent matrix operations
+    // -> Three values are accepted: GL_MODELVIEW, GL_PROJECTION, and GL_TEXTURE
+    // Move to marker-position
+    glMatrixMode(GL_MODELVIEW);
+ 
+    glLoadIdentity();
+
     // Set the camera with the y-axis pointing up
     gluLookAt(15, 15, 15, 0, 0, 0, 0, 1, 0);
     glRotatef(-angle, 0, 1, 0); //press R to rotate
@@ -817,7 +897,7 @@ int main(int argc, char* argv[])
 
     // Initialize the window system
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(640, 480, "ARPacman", NULL, NULL);
+    window = glfwCreateWindow(camera_width, camera_height, "ARPacman", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -875,15 +955,16 @@ int main(int argc, char* argv[])
     }
 
     //pos board
+    float *boardPos;
     
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
         
-        detectMarkers(m);
+        boardPos = detectMarkers(m);
         //else take old pos
 
         // Render here
-        display(window);
+        display(window, frame, boardPos);
 
         // Swap front and back buffers
         // -> the front buffer is the current in the window rendered frame
@@ -907,15 +988,14 @@ int main(int argc, char* argv[])
 
 
 
-void detectMarkers(MarkerTracker* m){
+float* detectMarkers(MarkerTracker* m){
     //if a new frame is available:
     cv::Vec3f boardPos;
     float distance;
-    cv::Mat frame;
     float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
+    float results[5][16];
 
         if (cap.read(frame)) {
-            float results[5][16];
             bool found[5];
             cv::Vec2f inputPos;
 
@@ -993,4 +1073,6 @@ void detectMarkers(MarkerTracker* m){
             
             
         }
+
+        return results[1];
 }

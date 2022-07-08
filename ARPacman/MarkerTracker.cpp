@@ -128,7 +128,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 	// Threshold to reduce the noise
 	threshold(grayScale, grayScale, thresh, 255, THRESH_BINARY);
 
-	cv::imshow("test", grayScale);
+	//cv::imshow("test", grayScale);
 
 	contour_vector_t contours;
 
@@ -694,7 +694,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 		estimateSquarePose(resultMatrix[markerID], (Point2f*)corners, 0.068);// previously 0.04346
 
 
-		continue;
+		//continue;
 		// This part is only for printing
 		for (int i = 0; i < 4; ++i) {
 			for (int j = 0; j < 4; ++j) {
@@ -711,9 +711,10 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 		x = resultMatrix[markerID][3];
 		y = resultMatrix[markerID][7];
 		z = resultMatrix[markerID][11];
+		cout << x << " " << y << " " << z << endl;
 		/* TASK: How can we calculate the distance? -> HINT: E... */
-		cout << "length: " << sqrt(x * x + y * y + z * z) << "\n";
-		cout << "\n";
+		//cout << "length: " << sqrt(x * x + y * y + z * z) << "\n";
+		//cout << "\n";
 
 		// Added in Exercise 5 - End *****************************************************************
 
