@@ -10,29 +10,29 @@ const std::string kWinName2 = "Exercise 8 - Converted Image";
 const std::string kWinName3 = "Exercise 8 - Stripe Image";
 const std::string kWinName4 = "Exercise 8 - Marker";
 
-class MarkerTracker{
+class MarkerTracker {
 public:
-	MarkerTracker(double kMarkerSize_) 
-		:	thresh(100),
+	MarkerTracker(double kMarkerSize_)
+		: thresh(100),
 		bw_thresh(100),
 		kMarkerSize(kMarkerSize_)
 	{
 		init();
 	}
-	MarkerTracker(double kMarkerSize_, int thresh_, int bw_thresh_) 
-		:	thresh(thresh_),
+	MarkerTracker(double kMarkerSize_, int thresh_, int bw_thresh_)
+		: thresh(thresh_),
 		bw_thresh(bw_thresh_),
 		kMarkerSize(kMarkerSize_)
 	{
 		init();
 	}
-	~MarkerTracker(){
+	~MarkerTracker() {
 		cleanup();
 	}
-	void findMarker( cv::Mat &img_bgr, float resultMatrix[5][16], bool found[5], cv::Vec2f inputPos);
+	void findMarker(cv::Mat& img_bgr, float resultMatrix[16]);
 protected:
-	void init( );
-	void cleanup( );
+	void init();
+	void cleanup();
 
 	//camera settings
 	const double kMarkerSize; // Marker size [m]

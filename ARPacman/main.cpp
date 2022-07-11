@@ -1,7 +1,4 @@
 #include <Windows.h>
-#include "Pacman.h"
-#include "Ghost.h"
-#include "gameManager.h"
 #include <GLFW/glfw3.h>
 #include <GL/GLU.h>
 #include "DrawPrimitives.h"
@@ -17,13 +14,17 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include<opencv2/opencv.hpp>
-#include"MarkerTracker.h"
-//#include "PoseEstimation.h"
+#include <opencv2/opencv.hpp>
+#include "MarkerTracker.h"
+#include "PoseEstimation.h"
+
+#include "Pacman.h"
+#include "Ghost.h"
+#include "gameManager.h"
 
 using namespace std;
 
-cv::VideoCapture cap(9);
+//cv::VideoCapture cap(9);
 // Gameboard
 int gameMap[22][19] = {
 {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
@@ -50,6 +51,29 @@ int gameMap[22][19] = {
 {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
 };
 
+cv::VideoCapture cap;
+
+// Camera settings
+const int camera_width = 640;
+const int camera_height = 480;
+const int virtual_camera_angle = 30;
+unsigned char background[camera_width * camera_height * 3];
+
+void initVideoStream(cv::VideoCapture& cap) {
+    if (cap.isOpened())
+        cap.release();
+
+    cap.open(1);
+    if (cap.isOpened() == false) {
+        std::cout << "No webcam found, using a video file" << std::endl;
+        cap.open("MarkerMovie.MP4");
+        if (cap.isOpened() == false) {
+            std::cout << "No video file found. Exiting." << std::endl;
+            exit(0);
+        }
+    }
+}
+
 Pacman pacmanAgent;
 Ghost ghost1(0.0f, 0.96f, 1.0f); //green-colored ghost
 Ghost ghost2(1.0f, 0.75f, 0.79f); //pink-colored ghost
@@ -65,12 +89,12 @@ typedef enum { IDLE, UP, DOWN, LEFT, RIGHT } moveFlag;
 moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 
 GLuint gameboard = glGenLists(1);
-const int camera_width = 640;
-const int camera_height = 360;
+//const int camera_width = 640;
+//const int camera_height = 360;
 //unsigned char background[camera_width * camera_height * 3];
-unsigned char background[camera_width * camera_height * 3];
+//unsigned char background[camera_width * camera_height * 3];
 cv::Mat frame;
-float* detectMarkers(MarkerTracker* m);
+//float* detectMarkers(MarkerTracker* m);
 
 //reshape
 void reshape(GLFWwindow* window, int width, int height)
@@ -724,76 +748,149 @@ void drawGameboard()
 }
 
 //display func
-void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
+void display(GLFWwindow* window, const cv::Mat& img_bg, float resultMatrix[16])
 {
 
-   float x = boardPos[3];
-    float y = boardPos[7];
-    float z = boardPos[11];
-    cout << "boardPos: [3]=" << x << " [7]=" << y << " [11]" << z << endl;
+    //float x = boardPos[3];
+    // float y = boardPos[7];
+    // float z = boardPos[11];
+    // cout << "boardPos: [3]=" << x << " [7]=" << y << " [11]" << z << endl;
 
-    for (size_t i = 0; i < 16; i++)
-    {
-        cout << "boardPos: ["<< i <<"] = "<< boardPos[i] << endl;
-    }
+    // for (size_t i = 0; i < 16; i++)
+    // {
+    //     cout << "boardPos: ["<< i <<"] = "<< boardPos[i] << endl;
+    // }
 
-    float resultTransposedMatrix[16];
-    for (int x = 0; x < 4; ++x) {
-        for (int y = 0; y < 4; ++y) {
-            // Change columns to rows
-            resultTransposedMatrix[x * 4 + y] = boardPos[y * 4 + x];
-            cout << boardPos[y * 4 + x] << " " << (y * 4 + x) << endl;
-        }
-    }
+    // float resultTransposedMatrix[16];
+    // for (int x = 0; x < 4; ++x) {
+    //     for (int y = 0; y < 4; ++y) {
+    //         // Change columns to rows
+    //         resultTransposedMatrix[x * 4 + y] = boardPos[y * 4 + x];
+    //         cout << boardPos[y * 4 + x] << " " << (y * 4 + x) << endl;
+    //     }
+    // }
 
-   // 0 4 8 12
-   // 1 5 9 13
-   // 2 6 10 14
-   // 3 7 11 15
+    //// 0 4 8 12
+    //// 1 5 9 13
+    //// 2 6 10 14
+    //// 3 7 11 15
 
-    // Copy picture data into bkgnd array
+    // // Copy picture data into bkgnd array
+    // memcpy(background, img_bg.data, sizeof(background));
+     //memcpy(background, img_bg.data, sizeof(background));
+
+    // x = boardPos[3];
+    // y = boardPos[7];
+    // z = boardPos[11];
+    // cout << "display" << x << " " << y << " " << z << endl;
+
+     //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+     //glClearColor(0, 0, 0, 1);
+
+     //glMatrixMode(GL_MODELVIEW);
+     //glLoadIdentity();
+
+     //glDisable(GL_DEPTH_TEST);
+     //glMatrixMode(GL_PROJECTION);
+     //glPushMatrix();
+     //glLoadIdentity();
+
+     //// In the ortho view all objects stay the same size at every distance
+     //glOrtho(0.0, camera_width, 0.0, camera_height, -1, 1);
+
+     //// -> Render the camera picture as background texture
+     //// Making a raster of the image -> -1 otherwise overflow
+     //glRasterPos2i(0, camera_height - 1);
+
+     //// Load and render the camera image -> unsigned byte because of bkgnd as unsigned char array
+     //// bkgnd 3 channels -> pixelwise rendering
+     //glDrawPixels(camera_width, camera_height, GL_BGR_EXT, GL_UNSIGNED_BYTE, background);
+
+     //glPopMatrix();
+     //glEnable(GL_DEPTH_TEST);
+
+     //// Specifies which matrix stack is the target for subsequent matrix operations
+     //// -> Three values are accepted: GL_MODELVIEW, GL_PROJECTION, and GL_TEXTURE
+     //// Move to marker-position
+     //glMatrixMode(GL_MODELVIEW);
+
+     //glLoadIdentity();
+
+     //// -> Transpose the Modelview Matrix
+     //float resultTransposedMatrix[16];
+     //for (int x = 0; x < 4; ++x) {
+     //    for (int y = 0; y < 4; ++y) {
+     //        // Change columns to rows
+     //        resultTransposedMatrix[x * 4 + y] = resultMatrix[y * 4 + x];
+     //    }
+     //}
+
+     //// Load the transpose matrix
+     //glLoadMatrixf(resultTransposedMatrix);
+
     memcpy(background, img_bg.data, sizeof(background));
 
-    x = boardPos[3];
-    y = boardPos[7];
-    z = boardPos[11];
-    cout << "display" << x << " " << y << " " << z << endl;
+    // Added in Exercise 8 - End *****************************************************************
 
+        // Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0, 0, 0, 1);
 
+    // Needed for rendering the real camera image
     glMatrixMode(GL_MODELVIEW);
+    // No position changes
     glLoadIdentity();
+
+    // Added in Exercise 8 - Start *****************************************************************
 
     glDisable(GL_DEPTH_TEST);
+
     glMatrixMode(GL_PROJECTION);
+    // Push the projection matrix (frustum) -> frustum will be saved on the stack
     glPushMatrix();
     glLoadIdentity();
-
     // In the ortho view all objects stay the same size at every distance
     glOrtho(0.0, camera_width, 0.0, camera_height, -1, 1);
 
     // -> Render the camera picture as background texture
     // Making a raster of the image -> -1 otherwise overflow
     glRasterPos2i(0, camera_height - 1);
-
     // Load and render the camera image -> unsigned byte because of bkgnd as unsigned char array
     // bkgnd 3 channels -> pixelwise rendering
     glDrawPixels(camera_width, camera_height, GL_BGR_EXT, GL_UNSIGNED_BYTE, background);
 
+    // Go back to the previous projection -> frustum
     glPopMatrix();
+
+    // Activate depth -> that snowman can be scaled with depth
     glEnable(GL_DEPTH_TEST);
 
-    // Specifies which matrix stack is the target for subsequent matrix operations
-    // -> Three values are accepted: GL_MODELVIEW, GL_PROJECTION, and GL_TEXTURE
     // Move to marker-position
     glMatrixMode(GL_MODELVIEW);
- 
-    glLoadIdentity();
+
+    // Sadly doesn't work for Windows -> so we made own solution!
+    //glLoadTransposeMatrixf(resultMatrix);
+
+    // -> Transpose the Modelview Matrix
+    float resultTransposedMatrix[16];
+    for (int x = 0; x < 4; ++x) {
+        for (int y = 0; y < 4; ++y) {
+            // Change columns to rows
+            resultTransposedMatrix[x * 4 + y] = resultMatrix[y * 4 + x];
+        }
+    }
+
+    // Load the transpose matrix
+    glLoadMatrixf(resultTransposedMatrix);
+
+    // Rotate 90 desgress in x-direction
+    glRotatef(-90, 1, 0, 0);
+
+    // Scale down!
+    glScalef(0.03, 0.03, 0.03);
 
     // Set the camera with the y-axis pointing up
-    gluLookAt(15, 15, 15, 0, 0, 0, 0, 1, 0);
-    glRotatef(-angle, 0, 1, 0); //press R to rotate
+    //gluLookAt(15, 15, 15, 0, 0, 0, 0, 1, 0);
+    //glRotatef(-angle, 0, 1, 0); //press R to rotate
     drawGameboard();
     drawPellets();
     drawPowerPellets();
@@ -825,7 +922,7 @@ void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
     ghost2.drawGhost();
     ghost3.drawGhost();
     ghost4.drawGhost();
-    //allow keyboard control of direction
+    ////allow keyboard control of direction
     pacmanAgent.enableKey = true;
 }
 
@@ -844,29 +941,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         std::cout << "Game has started";
     }
     //control pac direction
-    if (action == GLFW_PRESS){
-    switch (key)
-    {
-    case GLFW_KEY_W:
-        pacMoveDir = UP;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_S:
-        pacMoveDir = DOWN;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_A:
-        pacMoveDir = LEFT;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_D:
-        pacMoveDir = RIGHT;
-        std::cout << pacMoveDir;
-        break;
-    default:
-        break;
-    }}
-      
+    if (action == GLFW_PRESS) {
+        switch (key)
+        {
+        case GLFW_KEY_W:
+            pacMoveDir = UP;
+            std::cout << pacMoveDir;
+            break;
+        case GLFW_KEY_S:
+            pacMoveDir = DOWN;
+            std::cout << pacMoveDir;
+            break;
+        case GLFW_KEY_A:
+            pacMoveDir = LEFT;
+            std::cout << pacMoveDir;
+            break;
+        case GLFW_KEY_D:
+            pacMoveDir = RIGHT;
+            std::cout << pacMoveDir;
+            break;
+        default:
+            break;
+        }
+    }
+
 }
 
 
@@ -903,8 +1001,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    
-    
+
+
     /*cap.set(cv::CAP_PROP_BUFFERSIZE, 3);
 
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
@@ -914,20 +1012,20 @@ int main(int argc, char* argv[])
 
     //const string streamWindow = "Stream";
 
-    if (!cap.isOpened()) {
-        cout << "No webcam, using video file" << endl;
-        cap.open("MarkerMovie.mp4");
-        if (cap.isOpened() == false) {
-            cout << "No video!" << endl;
-            exit(0);
-            return -1;
-        }
-    } else cout << "Found webcam" << endl;
+    //if (!cap.isOpened()) {
+    //    cout << "No webcam, using video file" << endl;
+    //    cap.open("MarkerMovie.mp4");
+    //    if (cap.isOpened() == false) {
+    //        cout << "No video!" << endl;
+    //        exit(0);
+    //        return -1;
+    //    }
+    //} else cout << "Found webcam" << endl;
 
-    cv::namedWindow("test", CV_WINDOW_AUTOSIZE);
+    //cv::namedWindow("test", CV_WINDOW_AUTOSIZE);
 
 
-    MarkerTracker* m = new MarkerTracker(0.070,125,125);
+    //MarkerTracker* m = new MarkerTracker(0.070,125,125);
 
     // Set callback function for GLFW -> When the window size changes, the content will be adapted to the new window size
     glfwSetFramebufferSizeCallback(window, reshape);
@@ -948,6 +1046,15 @@ int main(int argc, char* argv[])
     // -> Give app arguments for configuration, e.g. depth or color should be activated or not
     init(argc, argv);
 
+    // Setup OpenCV
+    cv::Mat frame;
+    // Get video stream
+    initVideoStream(cap);
+    // [m]
+    const double kMarkerSize = 0.045;
+    // Constructor with the marker size (similar to Exercise 5)
+    MarkerTracker markerTracker(kMarkerSize);
+
     manager.controlThread = std::thread(gameManager, std::ref(manager));
     for (auto pGhost : ghosts)
     {
@@ -955,16 +1062,31 @@ int main(int argc, char* argv[])
     }
 
     //pos board
-    float *boardPos;
-    
+    //float *boardPos;
+    float resultMatrix[16];
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
-        
-        boardPos = detectMarkers(m);
+
+        // Capture here
+        cap >> frame;
+
+        // Make sure that we got a frame -> otherwise crash
+        if (frame.empty()) {
+            std::cout << "Could not query frame. Trying to reinitialize." << std::endl;
+            initVideoStream(cap);
+            // Wait for one sec.
+            cv::waitKey(1000);
+            continue;
+        }
+
+        //boardPos = detectMarkers(m);
         //else take old pos
+        // Track a marker and get the pose of the marker
+        markerTracker.findMarker(frame, resultMatrix);
+
 
         // Render here
-        display(window, frame, boardPos);
+        display(window, frame, resultMatrix);
 
         // Swap front and back buffers
         // -> the front buffer is the current in the window rendered frame
@@ -977,7 +1099,7 @@ int main(int argc, char* argv[])
     }
 
 
-    cv::destroyAllWindows();
+    //cv::destroyAllWindows();
 
     // Free the memory (IMPORTANT to avoid memory leaks!!!)
     glfwTerminate();
@@ -988,91 +1110,91 @@ int main(int argc, char* argv[])
 
 
 
-float* detectMarkers(MarkerTracker* m){
-    //if a new frame is available:
-    cv::Vec3f boardPos;
-    float distance;
-    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
-    float results[5][16];
-
-        if (cap.read(frame)) {
-            bool found[5];
-            cv::Vec2f inputPos;
-
-            //cv::imshow("test", frame);
-
-
-            m->findMarker(frame, results, found, inputPos);
-
-
-            int check = 0;
-            //calculate game board position
-            cv::Vec3f markerPoss[4];
-            
-            for (int i = 0; i < 4;i++) {
-                if (found[i]) {
-                    markerPoss[i] = {results[i][3],results[i][7],results[i][11]};
-                    check++;
-                }
-            }
-
-            if (check >= 3) {
-
-                cv::Vec3f pos1;
-                float dist1;
-                bool pos1Set = false;
-
-                if (found[0] && found[3]) {
-                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-                    
-                    pos1Set = true;
-
-                    boardPos = pos1;
-
-                }
-
-
-                cv::Vec3f pos2;
-                float dist2;
-                bool pos2Set = false;
-
-                if (found[1] && found[2]) {
-                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-
-                    pos2Set = true;
-
-                    boardPos = pos2;
-                }
-
-                if (check == 4) {
-                    boardPos = 0.5 * pos1 + 0.5 * pos2;
-                }
-
-                //do rotation here
-
-
-                
-
-            }
-
-            const float deadZoneRange = 0.5f;
-            //we calculate the mouvement direction
-            int mouvement; //0 = Right, 1= left, 2=up, 3= down
-            if (found[4]){
-                float Xdistance = inputPos[0]-originX;
-                float Ydistance = inputPos[1]-originY;
-
-                bool isXmovement = (Xdistance > Ydistance);
-                
-                if (isXmovement && Xdistance > deadZoneRange){
-                    mouvement = (Xdistance > 0) ? 0 : 1;
-                } else if (Ydistance > deadZoneRange){
-                    mouvement = (Ydistance > 0) ? 2 : 3;
-                }
-            }
-            
-            
-        }
-
-        return results[1];
-}
+//float* detectMarkers(MarkerTracker* m){
+//    //if a new frame is available:
+//    cv::Vec3f boardPos;
+//    float distance;
+//    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
+//    float results[5][16];
+//
+//        if (cap.read(frame)) {
+//            bool found[5];
+//            cv::Vec2f inputPos;
+//
+//            //cv::imshow("test", frame);
+//
+//
+//            m->findMarker(frame, results, found, inputPos);
+//
+//
+//            int check = 0;
+//            //calculate game board position
+//            cv::Vec3f markerPoss[4];
+//            
+//            for (int i = 0; i < 4;i++) {
+//                if (found[i]) {
+//                    markerPoss[i] = {results[i][3],results[i][7],results[i][11]};
+//                    check++;
+//                }
+//            }
+//
+//            if (check >= 3) {
+//
+//                cv::Vec3f pos1;
+//                float dist1;
+//                bool pos1Set = false;
+//
+//                if (found[0] && found[3]) {
+//                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+//                    
+//                    pos1Set = true;
+//
+//                    boardPos = pos1;
+//
+//                }
+//
+//
+//                cv::Vec3f pos2;
+//                float dist2;
+//                bool pos2Set = false;
+//
+//                if (found[1] && found[2]) {
+//                    pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+//
+//                    pos2Set = true;
+//
+//                    boardPos = pos2;
+//                }
+//
+//                if (check == 4) {
+//                    boardPos = 0.5 * pos1 + 0.5 * pos2;
+//                }
+//
+//                //do rotation here
+//
+//
+//                
+//
+//            }
+//
+//            const float deadZoneRange = 0.5f;
+//            //we calculate the mouvement direction
+//            int mouvement; //0 = Right, 1= left, 2=up, 3= down
+//            if (found[4]){
+//                float Xdistance = inputPos[0]-originX;
+//                float Ydistance = inputPos[1]-originY;
+//
+//                bool isXmovement = (Xdistance > Ydistance);
+//                
+//                if (isXmovement && Xdistance > deadZoneRange){
+//                    mouvement = (Xdistance > 0) ? 0 : 1;
+//                } else if (Ydistance > deadZoneRange){
+//                    mouvement = (Ydistance > 0) ? 2 : 3;
+//                }
+//            }
+//            
+//            
+//        }
+//
+//        return results[1];
+//}
