@@ -27,10 +27,13 @@
     <ClCompile Include="Ghost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PoseEstimation.cpp">
+    <ClCompile Include="MarkerTracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MarkerTracker.cpp">
+    <ClCompile Include="Feature.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PoseEstimation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,10 +50,13 @@
     <ClInclude Include="Ghost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PoseEstimation.h">
+    <ClInclude Include="MarkerTracker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MarkerTracker.h">
+    <ClInclude Include="Feature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PoseEstimation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

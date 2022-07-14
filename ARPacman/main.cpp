@@ -1,25 +1,19 @@
 #include <Windows.h>
 #include "Pacman.h"
 #include "Ghost.h"
+#include "Feature.h"
 #include "gameManager.h"
 #include <GLFW/glfw3.h>
 #include <GL/GLU.h>
 #include "DrawPrimitives.h"
 #include <iostream>
 #include <iomanip>
-//#include "OpenCVSetup.h"
-//#include<opencv2/opencv.hpp>
-
-
-//#include <opencv2/highgui.hpp>
-//#include <opencv2/imgproc.hpp>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 #include<opencv2/opencv.hpp>
 #include"MarkerTracker.h"
-//#include "PoseEstimation.h"
 
 using namespace std;
 
@@ -35,8 +29,8 @@ int gameMap[22][19] = {
 {1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1},
 {1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1},
 {0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0},
-{1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1}, //line 10
-{0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0}, //line 11
+{1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1}, 
+{0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0},
 {1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1},
 {0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0},
 {1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1},
@@ -50,17 +44,18 @@ int gameMap[22][19] = {
 {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
 };
 
+
 Pacman pacmanAgent;
-Ghost ghost1(0.0f, 0.96f, 1.0f); //green-colored ghost
-Ghost ghost2(1.0f, 0.75f, 0.79f); //pink-colored ghost
-Ghost ghost3(0.85f, 0.65f, 0.13f); //orange-colored ghost
+Ghost ghost1(0.0f, 0.6f, 1.0f); //blue-colored ghost
+Ghost ghost2(1.0f, 0.15f, 0.79f); //pink-colored ghost
+Ghost ghost3(1.0f, 0.5f, 0.0f); //yellow-colored ghost
 Ghost ghost4(1.0f, 0.0f, 0.0f); //red-colored ghost
 
 std::vector<Ghost*> ghosts = { &ghost1,&ghost2,&ghost3,&ghost4 };
 extern void ghostAction(Ghost& ghost, const Pacman& pacman);
 
 extern GameManager manager;
-float angle = -45; //grid rotation angle
+Feature feature;
 typedef enum { IDLE, UP, DOWN, LEFT, RIGHT } moveFlag;
 moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 
@@ -88,11 +83,6 @@ void reshape(GLFWwindow* window, int width, int height)
     float left = ratio * bottom;
     float right = ratio * top;
     glFrustum(left, right, bottom, top, _near, _far);
-    /*
-    gluPerspective(30.0, (GLfloat)width / (GLfloat)height, 1.0, 40.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    */
 }
 
 ///* Program & OpenGL initialization */
@@ -209,12 +199,12 @@ void Ghost::drawGhost()
 void drawPowerPellets()
 {
     //set material
-    GLfloat mat_color[] = { 0.93f, 0.86f, 0.51f, 1.0f };
+    GLfloat mat_color[] = { 1.0f, 0.5f, 0.0f, 1.0f };
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_color);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
 
-    glColor3f(0.93f, 0.86f, 0.51f); //golden color
+    glColor3f(1.0f, 0.5f, 0.0f);
     //spots on the gameMap to draw powerpellet
     int powerpellet[4][2] =
     {
@@ -247,14 +237,24 @@ void drawGameboard()
 {
     //for IDLE image,create a display list
     glNewList(gameboard, GL_COMPILE);
-    GLfloat mat_color[] = { 0.0f, 0.60f, 0.80f, 1.0f };
+    GLfloat mat_color[] = { 0.015996f, 0.039546f, 1.0f, 1.0f };
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_color);
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_color);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_color);
 
     /*draw blue cylinders*/
-    glColor3f(0.0f, 0.60f, 0.80f);
+    glColor3f(0.015996f, 0.039546f, 1.0f);
     GLUquadricObj* objCylinder = gluNewQuadric();
+    //background
+    if(feature.enableBackground){
+        glPushMatrix();
+        glTranslatef(0, 0, 0);
+        glRotatef(90, 1, 0, 0);
+        glRectf(-9 * gameLength, -10 * gameLength, 9 * gameLength, 11 * gameLength);
+        glPopMatrix();
+    }
+    
+
     //rectangle at the center
     glPushMatrix();
     glTranslatef(-2 * gameLength, 0, -1 * gameLength);
@@ -735,6 +735,12 @@ void drawDirectionArrows() {
     glTranslatef(-10, 0, 0);
     //top arrow
     glPushMatrix();
+    if (feature.arrowUp) {
+        glColor3f(0.0f, 1.0f, 0.0f);
+    }
+    else {
+        glColor3f(1.0f, 0.0f, 0.0f);
+    }
     glTranslatef(0, 0, -3);
 
     glPushMatrix();
@@ -750,9 +756,16 @@ void drawDirectionArrows() {
     //we reset to center
     glPopMatrix();
     //end top arrow
+ 
     //bottom arrow
     //we go to center of bottom arrow
     glPushMatrix();
+    if (feature.arrowDown) {
+        glColor3f(0.0f, 1.0f, 0.0f);
+    }
+    else {
+        glColor3f(1.0f, 0.0f, 0.0f);
+    }
     glTranslatef(0, 0, 3);
 
     glPushMatrix();
@@ -771,6 +784,12 @@ void drawDirectionArrows() {
     //left arrow
     //we go to center of bottom arrow
     glPushMatrix();
+    if (feature.arrowLeft) {
+        glColor3f(0.0f, 1.0f, 0.0f);
+    }
+    else {
+        glColor3f(1.0f, 0.0f, 0.0f);
+    }
     glTranslatef(-3, 0, 0);
 
     glPushMatrix();
@@ -789,6 +808,12 @@ void drawDirectionArrows() {
     //Right arrow
     //we go to center of bottom arrow
     glPushMatrix();
+    if (feature.arrowRight) {
+        glColor3f(0.0f, 1.0f, 0.0f);
+    }
+    else {
+        glColor3f(1.0f, 0.0f, 0.0f);
+    }
     glTranslatef(3, 0, 0);
 
     glPushMatrix();
@@ -871,14 +896,12 @@ void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
     // Scale down!
     glScalef(0.03, 0.03, 0.03);
 
-    // Set the camera with the y-axis pointing up
-    //gluLookAt(15, 15, 15, 0, 0, 0, 0, 1, 0);
-    //glRotatef(-angle, 0, 1, 0); //press R to rotate
+    // render
     drawDirectionArrows();
     drawGameboard();
     drawPellets();
     drawPowerPellets();
-    //draw pacman,cosidering motion
+    // draw pacman,cosidering motion
     switch (pacMoveDir)
     {
     case IDLE:
@@ -887,18 +910,22 @@ void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
     case UP:
         pacmanAgent.moveUp();
         pacmanAgent.drawPacman();
+        feature.colorArrowTop();
         break;
     case DOWN:
         pacmanAgent.moveDown();
         pacmanAgent.drawPacman();
+        feature.colorArrowBottom();
         break;
     case LEFT:
         pacmanAgent.moveLeft();
         pacmanAgent.drawPacman();
+        feature.colorArrowLeft();
         break;
     case RIGHT:
         pacmanAgent.moveRight();
         pacmanAgent.drawPacman();
+        feature.colorArrowRight();
         break;
     }
 
@@ -926,28 +953,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
     //control pac direction
     if (action == GLFW_PRESS){
-    switch (key)
-    {
-    case GLFW_KEY_W:
-        pacMoveDir = UP;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_S:
-        pacMoveDir = DOWN;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_A:
-        pacMoveDir = LEFT;
-        std::cout << pacMoveDir;
-        break;
-    case GLFW_KEY_D:
-        pacMoveDir = RIGHT;
-        std::cout << pacMoveDir;
-        break;
-    default:
-        break;
-    }}
-      
+        switch (key)
+        {
+            case GLFW_KEY_W:
+                pacMoveDir = UP;
+                break;
+            case GLFW_KEY_S:
+                pacMoveDir = DOWN;
+                break;
+            case GLFW_KEY_A:
+                pacMoveDir = LEFT;
+                break;
+            case GLFW_KEY_D:
+                pacMoveDir = RIGHT;
+                break;
+            case GLFW_KEY_B:
+                feature.setBackground();
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 
@@ -963,6 +989,92 @@ void idle()
         pacMoveDir = IDLE;
         //stop redisplaying until everything is resumed
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16]) {
+    //if a new frame is available:
+    float distance;
+    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
+    float results[5][16];
+
+    if (cap.read(frame)) {
+        bool found[5];
+        cv::Vec2f inputPos;
+
+        //cv::imshow("test", frame);
+
+
+        m->findMarker(frame, results, found, inputPos);
+
+        int check = 0;
+        //calculate game board position
+        cv::Vec3f markerPoss[4];
+
+        for (int i = 0; i < 4; i++) {
+            if (found[i]) {
+                markerPoss[i] = { results[i][3],results[i][7],results[i][11] };
+                check++;
+            }
+        }
+
+        if (check >= 3) {
+
+            cv::Vec3f pos1;
+            float dist1;
+            bool pos1Set = false;
+
+            if (found[0] && found[3]) {
+                for (int i = 0; i < 16; i++) {
+                    boardPos[i] = ((results[0][i] * 0.5) + (results[3][i] * 0.5));
+                }
+                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+
+                pos1Set = true;
+
+                //boardPos = pos1;
+
+            }
+
+
+            cv::Vec3f pos2;
+            float dist2;
+            bool pos2Set = false;
+
+            if (found[1] && found[2]) {
+                for (int i = 0; i < 16; i++) {
+                    boardPos[i] = results[1][i] * 0.5 + results[2][i] * 0.5;
+                }
+                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
+
+                pos2Set = true;
+
+                //boardPos = pos2;
+            }
+
+            /*xif (check == 4) {
+                boardPos = 0.5 * pos1 + 0.5 * pos2;
+            }*/
+
+            //do rotation here
+
+        }
+
+        const float deadZoneRange = 0.5f;
+        //we calculate the mouvement direction
+        if (found[4]) {
+            float Xdistance = inputPos[0] - originX;
+            float Ydistance = inputPos[1] - originY;
+
+            bool isXmovement = (Xdistance > Ydistance);
+
+            if (isXmovement && Xdistance > deadZoneRange) {
+                *mouvement = (Xdistance > 0) ? 0 : 1;
+            }
+            else if (Ydistance > deadZoneRange) {
+                *mouvement = (Ydistance > 0) ? 2 : 3;
+            }
+        }
     }
 }
 
@@ -1065,98 +1177,4 @@ int main(int argc, char* argv[])
     glfwTerminate();
 
     return 0;
-}
-
-
-
-
-void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16]) {
-    //if a new frame is available:
-    float distance;
-    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
-    float results[5][16];
-
-    if (cap.read(frame)) {
-        bool found[5];
-        cv::Vec2f inputPos;
-
-        //cv::imshow("test", frame);
-
-
-        m->findMarker(frame, results, found, inputPos);
-
-        int check = 0;
-        //calculate game board position
-        cv::Vec3f markerPoss[4];
-
-        for (int i = 0; i < 4; i++) {
-            if (found[i]) {
-                markerPoss[i] = { results[i][3],results[i][7],results[i][11] };
-                check++;
-            }
-        }
-
-        if (check >= 3) {
-
-            cv::Vec3f pos1;
-            float dist1;
-            bool pos1Set = false;
-
-            if (found[0] && found[3]) {
-                for (int i = 0; i < 16; i++) {
-                    boardPos[i] = ((results[0][i] * 0.5) + (results[3][i] * 0.5));
-                }
-                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-
-                pos1Set = true;
-
-                //boardPos = pos1;
-
-            }
-
-
-            cv::Vec3f pos2;
-            float dist2;
-            bool pos2Set = false;
-
-            if (found[1] && found[2]) {
-                for (int i = 0; i < 16; i++) {
-                    boardPos[i] = results[1][i] * 0.5 + results[2][i] * 0.5;
-                }
-                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-
-                pos2Set = true;
-
-                //boardPos = pos2;
-            }
-
-            /*xif (check == 4) {
-                boardPos = 0.5 * pos1 + 0.5 * pos2;
-            }*/
-
-            //do rotation here
-
-
-
-
-        }
-
-        const float deadZoneRange = 0.5f;
-        //we calculate the mouvement direction
-        if (found[4]) {
-            float Xdistance = inputPos[0] - originX;
-            float Ydistance = inputPos[1] - originY;
-
-            bool isXmovement = (Xdistance > Ydistance);
-
-            if (isXmovement && Xdistance > deadZoneRange) {
-                *mouvement = (Xdistance > 0) ? 0 : 1;
-            }
-            else if (Ydistance > deadZoneRange) {
-                *mouvement = (Ydistance > 0) ? 2 : 3;
-            }
-        }
-
-
-    }
 }

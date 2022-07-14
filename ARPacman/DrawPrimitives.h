@@ -60,3 +60,4 @@ void drawCone(GLdouble base, GLdouble height, GLint slices, GLint stacks)
 	}
 	glEnd();
 }
+
