@@ -103,7 +103,7 @@ int subpixSampleSafe ( const Mat &pSrc, const Point2f &p )
 
 void MarkerTracker::init()
 {
-	std::cout << "Startup\n";
+	//std::cout << "Startup\n";
 	
 	memStorage = cvCreateMemStorage();
 }
@@ -112,7 +112,7 @@ void MarkerTracker::cleanup()
 {
 	cvReleaseMemStorage (&memStorage);
 
-	std::cout << "Finished\n";
+	//std::cout << "Finished\n";
 }
 
 void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool found[5], cv::Vec2f inputPos )
@@ -475,7 +475,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 			// c -> Determinant = 0 -> linear dependent -> the direction vectors are parallel -> No division with 0
 			double c = v1 * u0 - v0 * u1;
 			if (fabs(c) < 0.001) {
-				//std::cout << "lines parallel" << std::endl;
+				////std::cout << "lines parallel" << std::endl;
 				continue;
 			}
 
@@ -621,7 +621,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 			}
 		}
 
-		int markerID = 0;
+		int markerID = -1;
 		switch (code) {
 		case 0x1C44:
 			markerID = 0;
@@ -636,17 +636,23 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 			markerID = 3;
 			break;
 		case 0x005A:
+			cout << "Mouvement detected" << endl;
+			markerID = 4;
+			break;
+		case 0x0001:
+			cout << "Mouvement detected" << endl;
 			markerID = 4;
 			break;
 		default:
+			cout << "marker " << code << " detected" << endl;
 			continue;
 		}
 
-		found[markerID] = true;
+		if (markerID != -1) found[markerID] = true;
 
 		// Print ID
 		//printf("Found: %04x\n", code);
-		cout << "Marker " << code << " known as ID " << markerID << endl;
+		//cout << "Marker " << code << " known as ID " << markerID << endl;
 		// Added in sheet 4 Ex10 (c)- End *****************************************************************
 
 		// Added in sheet 4 - End *******************************************************************
@@ -677,7 +683,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 			corners[i].y = -corners[i].y + img_bgr.rows * 0.5f;
 		}
 
-		if (markerID == 4) {
+		if (markerID == 4 || markerID == 5) {
 			inputPos = 0;
 
 			for (int i = 0; i < 4;i++) {
@@ -695,7 +701,7 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 
 
 		//continue;
-		// This part is only for printing
+		/* This part is only for printing
 		for (int i = 0; i < 4; ++i) {
 			for (int j = 0; j < 4; ++j) {
 				cout << setw(6); // Total 6
@@ -705,13 +711,13 @@ void MarkerTracker::findMarker(Mat& img_bgr, float resultMatrix[5][16], bool fou
 			}
 			cout << "\n";
 		}
-		cout << "\n";
+		cout << "\n";*/
 		float x, y, z;
 		// Translation values in the transformation matrix to calculate the distance between the marker and the camera
 		x = resultMatrix[markerID][3];
 		y = resultMatrix[markerID][7];
 		z = resultMatrix[markerID][11];
-		cout << x << " " << y << " " << z << endl;
+		//cout << x << " " << y << " " << z << endl;
 		/* TASK: How can we calculate the distance? -> HINT: E... */
 		//cout << "length: " << sqrt(x * x + y * y + z * z) << "\n";
 		//cout << "\n";

@@ -65,7 +65,7 @@ const int camera_height = 360;
 //unsigned char background[camera_width * camera_height * 3];
 unsigned char background[camera_width * camera_height * 3];
 cv::Mat frame;
-void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16]);
+void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16], bool* tlBrMarkers);
 
 //reshape
 void reshape(GLFWwindow* window, int width, int height)
@@ -834,7 +834,7 @@ void drawDirectionArrows() {
 
 }
 //display func
-void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
+void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos, bool tlBrMarker)
 {
 
     memcpy(background, img_bg.data, sizeof(background));
@@ -891,7 +891,13 @@ void display(GLFWwindow* window, cv::Mat img_bg, float *boardPos)
     glLoadMatrixf(resultTransposedMatrix);
 
     // Rotate 90 desgress in x-direction
-    glRotatef(-90, 1, 0, 0);
+    if (tlBrMarker) {
+        glRotatef(90, 0, 0, 1);
+        glRotatef(-90, 1, 0, 0);
+        //cout << "lol" << endl;
+    }
+    else
+        glRotatef(-90, 1, 0, 0);
 
     // Scale down!
     glScalef(0.03, 0.03, 0.03);
@@ -986,7 +992,7 @@ void idle()
     //when pacman dies/wins,stop the animation for a while
     while (manager.gameStatus == PACDIE || manager.gameStatus == END)
     {
-        //disable control of direction
+        //disable control of directionc
         pacmanAgent.enableKey = false;
         //resume pacman's moveflag
         pacMoveDir = IDLE;
@@ -994,15 +1000,16 @@ void idle()
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
-
-void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16]) {
+//float oldboardPos[16];
+void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16], bool* tlBrMarkers) {
     //if a new frame is available:
     float distance;
-    float originX = 1.0f, originY = 1.0f; //TODO : makes this In H File
     float results[5][16];
 
     if (cap.read(frame)) {
         bool found[5];
+        for (int i = 0; i <= 4; i++)
+            found[i] = false;
         cv::Vec2f inputPos;
 
         //cv::imshow("test", frame);
@@ -1021,63 +1028,59 @@ void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16]) {
             }
         }
 
-        if (check >= 3) {
+        if (check >= 2) {
 
-            cv::Vec3f pos1;
-            float dist1;
-            bool pos1Set = false;
-
+            /* we use topleft and bottom right marker*/
             if (found[0] && found[3]) {
                 for (int i = 0; i < 16; i++) {
-                    boardPos[i] = ((results[0][i] * 0.5) + (results[3][i] * 0.5));
+                    //Need to rotate -90degree
+                    boardPos[i] = results[0][i] * 0.5 + results[3][i] * 0.5;
+                    //oldboardPos[i] = boardPos[i];
+                    *tlBrMarkers = true;
                 }
-                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-
-                pos1Set = true;
-
-                //boardPos = pos1;
-
             }
-
-
-            cv::Vec3f pos2;
-            float dist2;
-            bool pos2Set = false;
-
-            if (found[1] && found[2]) {
+            else if (found[1] && found[2]) { /*We use top right and bootom left marker*/
                 for (int i = 0; i < 16; i++) {
                     boardPos[i] = results[1][i] * 0.5 + results[2][i] * 0.5;
+                    //oldboardPos[i] = boardPos[i];
+                    *tlBrMarkers = false;
                 }
-                //pos1 = 0.5f * markerPoss[0] + 0.5f * markerPoss[3];
-
-                pos2Set = true;
-
-                //boardPos = pos2;
             }
 
-            /*xif (check == 4) {
-                boardPos = 0.5 * pos1 + 0.5 * pos2;
-            }*/
-
-            //do rotation here
-
         }
+        /*else {
+            //if no marker detected we use old oboard position
+            cout << "no marker" << endl;
+            for (int i = 0; i < 16; i++) {
+                boardPos[i] = oldboardPos[i];
+            }
+            
+        }*/
+        
+        
+        //SCRAPPED : handheld tracker mouvement, RIP
 
-        const float deadZoneRange = 0.5f;
+        /*float originX = boardPos[3]-0.02f, originY = boardPos[11]; //TODO : makes this In H File
+        const float deadZoneRange = 0.1f;
         //we calculate the mouvement direction
         if (found[4]) {
-            float Xdistance = inputPos[0] - originX;
-            float Ydistance = inputPos[1] - originY;
-
+            cout << "board Origin : " << originX << " and " << originY << endl;
+            cout << "marker pos " << results[4][3] << " and " << results[4][11] << endl;
+            float Xdistance = results[4][3] - originX;
+            float Ydistance = results[4][11] - originY;
+            cout << "distance x" << Xdistance << " and y  " << Ydistance << endl;
             bool isXmovement = (Xdistance > Ydistance);
 
+            //
+            *mouvement = -1;
             if (isXmovement && Xdistance > deadZoneRange) {
                 *mouvement = (Xdistance > 0) ? 0 : 1;
             }
             else if (Ydistance > deadZoneRange) {
                 *mouvement = (Ydistance > 0) ? 2 : 3;
             }
-        }
+            cout << "mouvement int is " << *mouvement << endl;
+        }*/
     }
 }
 
@@ -1109,7 +1112,7 @@ int main(int argc, char* argv[])
     cap.set(cv::CAP_PROP_FPS, 25);*/
 
     //const string streamWindow = "Stream";
-
+    cout << "start" << endl;
     if (!cap.isOpened()) {
         cout << "No webcam, using video file" << endl;
         cap.open("MarkerMovie.mp4");
@@ -1120,7 +1123,7 @@ int main(int argc, char* argv[])
         }
     } else cout << "Found webcam" << endl;
 
-    cv::namedWindow("test", CV_WINDOW_AUTOSIZE);
+    //cv::namedWindow("test", CV_WINDOW_AUTOSIZE);
 
 
     MarkerTracker* m = new MarkerTracker(0.070,125,125);
@@ -1157,11 +1160,12 @@ int main(int argc, char* argv[])
     while (!glfwWindowShouldClose(window)) {
 
         int mouvement;
-        detectMarkers(m, &mouvement, boardPos);
+        bool tlbrMarkers; //need a different rotation based on the markers detected
+        detectMarkers(m, &mouvement, boardPos, &tlbrMarkers);
         //else take old pos
 
         // Render here
-        display(window, frame, boardPos);
+        display(window, frame, boardPos, tlbrMarkers);
 
         // Swap front and back buffers
         // -> the front buffer is the current in the window rendered frame
