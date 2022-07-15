@@ -29,5 +29,4 @@ private:
 	float colorR, colorG, colorB; //color
 	float x, z; //coordinates on x-z plane (y pointing up)
 	float speed; //default is 5 steps / sec
-	//bool killed;
 };

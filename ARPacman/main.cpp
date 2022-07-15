@@ -55,7 +55,7 @@ std::vector<Ghost*> ghosts = { &ghost1,&ghost2,&ghost3,&ghost4 };
 extern void ghostAction(Ghost& ghost, const Pacman& pacman);
 
 extern GameManager manager;
-Feature feature;
+extern Feature feature;
 typedef enum { IDLE, UP, DOWN, LEFT, RIGHT } moveFlag;
 moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 
@@ -969,6 +969,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             case GLFW_KEY_B:
                 feature.setBackground();
+                break;
+            case GLFW_KEY_P:
+                feature.setSound();
                 break;
             default:
                 break;

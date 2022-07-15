@@ -1,9 +1,11 @@
 #include <Windows.h>
 #include "Pacman.h"
 #include "GameManager.h"
+#include "Feature.h"
 #include <cmath>
 extern enum moveFlag pacMoveDir, oldPacMoveDir;
 extern GameManager manager;
+extern Feature feature;
 
 //constructor
 Pacman::Pacman() : colorR(1.0f), colorG(1.0f), colorB(1.0f)
@@ -51,19 +53,24 @@ void Pacman::moveUp()
     {
         manager.powerUpEaten = true;
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
     else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
-    Sleep(10 / speed);
+    Sleep(20 / speed);
     //if the move is legal, update coordinates
     z -= 1 * gameLength;
     //set wherever the pacman went to "EMPTYSPACE"
     gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
-    //in the displayfunc(),call drawPacman() to move the pacman image up
 }
 void Pacman::moveDown()
 {
@@ -80,19 +87,24 @@ void Pacman::moveDown()
     {
         manager.powerUpEaten = true;
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
     else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
-    Sleep(10 / speed);
+    Sleep(20 / speed);
     //update coordinates
     z += 1 * gameLength;
     //set wherever the pacman went to "EMPTYSPACE"
     gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
-    //in the displayfunc(),call drawPacman() to move the pacman image up
 }
 void Pacman::moveLeft()
 {
@@ -115,19 +127,24 @@ void Pacman::moveLeft()
     {
         manager.powerUpEaten = true;
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
     else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
-    Sleep(10 / speed);
+    Sleep(20 / speed);
     //update coordinates
     x -= 1 * gameLength;
     //set wherever the pacman went to "EMPTYSPACE"
     gameMap[zTemp][xTemp] = EMPTYSPACE;
     //direction changed
     oldPacMoveDir = pacMoveDir;
-    //in the displayfunc(),call drawPacman() to move the pacman image up
 }
 void Pacman::moveRight()
 {
@@ -150,12 +167,19 @@ void Pacman::moveRight()
     {
         manager.powerUpEaten = true;
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
     }
     else if (gameMap[zTemp][xTemp] == PELLET)
     {
         countEats++;
+        if (feature.enableSound) {
+            PlaySound(L"pacman_eatfruit.wav", NULL, SND_FILENAME | SND_ASYNC);
+        }
+        
     }
-    Sleep(10 / speed);
+    Sleep(20 / speed);
     //update coordinates
     x += 1 * gameLength;
     //set wherever the pacman went to "EMPTYSPACE"

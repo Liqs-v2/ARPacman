@@ -1,43 +1,54 @@
 #include "Feature.h"
 
+Feature feature;
+
 Feature::Feature() {
 
 }
 
 void Feature::colorArrowTop() {
-    arrowUp = true;
-    arrowDown = false;
-    arrowLeft = false;
-    arrowRight = false;
+    feature.arrowUp = true;
+    feature.arrowDown = false;
+    feature.arrowLeft = false;
+    feature.arrowRight = false;
 }
 
 void Feature::colorArrowBottom() {
-    arrowUp = false;
-    arrowDown = true;
-    arrowLeft = false;
-    arrowRight = false;
+    feature.arrowUp = false;
+    feature.arrowDown = true;
+    feature.arrowLeft = false;
+    feature.arrowRight = false;
 }
 
 void Feature::colorArrowLeft() {
-    arrowUp = false;
-    arrowDown = false;
-    arrowLeft = true;
-    arrowRight = false;
+    feature.arrowUp = false;
+    feature.arrowDown = false;
+    feature.arrowLeft = true;
+    feature.arrowRight = false;
 
 }
 
 void Feature::colorArrowRight() {
-    arrowUp = false;
-    arrowDown = false;
-    arrowLeft = false;
-    arrowRight = true;
+    feature.arrowUp = false;
+    feature.arrowDown = false;
+    feature.arrowLeft = false;
+    feature.arrowRight = true;
 }
 
 void Feature::setBackground() {
-    if (!enableBackground) {
-        enableBackground = true;
+    if (!feature.enableBackground) {
+        feature.enableBackground = true;
     }
     else {
-        enableBackground = false;
+        feature.enableBackground = false;
+    }
+}
+
+void Feature::setSound() {
+    if (!feature.enableSound) {
+        feature.enableSound = true;
+    }
+    else {
+        feature.enableSound = false;
     }
 }
