@@ -6,12 +6,12 @@ We created a marker-tracking based AR pacman game. To achieve this we utilized o
 re-using and adapting code where we saw fit.
 
 ## How to play
-W: Pacman up
-S: Pacman down
-A: Pacman left
-D: Pacman right
-B: enable/disable Board Background
-P: enable/disable Pacman Soundtrack
+* W: Pacman up
+* S: Pacman down
+* A: Pacman left
+* D: Pacman right
+* B: enable/disable Board Background
+* P: enable/disable Pacman Soundtrack
 
 ## Setup Windows
 
