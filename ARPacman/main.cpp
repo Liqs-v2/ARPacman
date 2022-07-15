@@ -62,7 +62,6 @@ moveFlag oldPacMoveDir = IDLE, pacMoveDir; //current moving direction
 GLuint gameboard = glGenLists(1);
 const int camera_width = 640;
 const int camera_height = 360;
-//unsigned char background[camera_width * camera_height * 3];
 unsigned char background[camera_width * camera_height * 3];
 cv::Mat frame;
 void detectMarkers(MarkerTracker* m, int* mouvement, float boardPos[16], bool* tlBrMarkers);
@@ -253,7 +252,6 @@ void drawGameboard()
         glRectf(-9 * gameLength, -10 * gameLength, 9 * gameLength, 11 * gameLength);
         glPopMatrix();
     }
-    
 
     //rectangle at the center
     glPushMatrix();

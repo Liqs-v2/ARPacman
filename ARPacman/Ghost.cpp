@@ -1,13 +1,16 @@
 #include <Windows.h>
 #include "Ghost.h"
+#include "Feature.h"
 #include <iostream>
 extern GameManager manager;
+extern Feature feature;
 
 void ghostAction(Ghost& ghost, const Pacman& pacman)
 {
     ghost.waitForRelease();
     while (manager.gameStatus == STARTED)
     {
+        //simple Ghost movement
         ghost.direction = rand() % (ghost.max_ - ghost.min_ + 1) + ghost.min_;
         //alive, do as following
         if (!ghost.killed)
@@ -35,6 +38,9 @@ void ghostAction(Ghost& ghost, const Pacman& pacman)
         //killed, go back to the maze center
         else if (ghost.killed)
         {
+            if (feature.enableSound) {
+                PlaySound(L"pacman_eatghost.wav", NULL, SND_FILENAME | SND_ASYNC);
+            }
             //wait for 5s to respawn:
             time_point start = std::chrono::steady_clock::now();
             time_point now = std::chrono::steady_clock::now();

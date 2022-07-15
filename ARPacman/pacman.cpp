@@ -19,7 +19,6 @@ Pacman::Pacman() : colorR(1.0f), colorG(1.0f), colorB(1.0f)
     totalEatsToWin = 156;
 }
 
-
 //pacman respawn after killed or game ends
 void Pacman::respawn()
 {

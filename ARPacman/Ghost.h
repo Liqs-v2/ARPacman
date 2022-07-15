@@ -22,7 +22,6 @@ public:
 	void waitForRelease();
 	void drawGhost();
 	void setColor(float R, float G, float B);
-	void die();
 	void spawn(); //return the spot number
 	void resume();
 	friend void ghostAction(Ghost& ghost, const Pacman& pacman);

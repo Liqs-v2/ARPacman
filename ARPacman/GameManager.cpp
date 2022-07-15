@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include "GameManager.h"
 #include "Ghost.h"
+#include "Feature.h"
 #include <iostream>
 
 extern Pacman pacmanAgent;
@@ -8,6 +9,7 @@ extern std::vector<Ghost*> ghosts;
 extern void ghostAction(Ghost& ghost, const Pacman& pacman);
 extern int gameMap[22][19];
 GameManager manager;
+extern Feature feature;
 
 
 //game manager thread func
@@ -18,7 +20,10 @@ void gameManager(GameManager& manager)
         //wait for the game to start
         while (manager.gameStatus != STARTED)
         {
-            Sleep(200);
+            //Sleep(200);
+            if (!feature.enableSound) {
+                PlaySound(L"pacman_beginning.wav", NULL, SND_FILENAME | SND_SYNC);
+            }
         }
         //check if we should enter power-mode
         if (!manager.powerModeStart && manager.powerUpEaten)
@@ -114,6 +119,9 @@ void GameManager::inNormalMode()
             ArrayZ(ghosts[i]->z) == ArrayZ(pacmanAgent.z))
         {
             pacmanAgent.killed = true;
+            if (feature.enableSound) {
+                PlaySound(L"pacman_death.wav", NULL, SND_FILENAME | SND_ASYNC);
+            }
             manager.pacDeaths++;
             manager.gameStatus = PACDIE;
 
